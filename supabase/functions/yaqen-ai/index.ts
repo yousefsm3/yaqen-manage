@@ -94,10 +94,19 @@ Deno.serve(async (req) => {
       return json({ fields: parseJson(text) });
     }
 
+    if (mode === "translate") {
+      const src = String(body.text ?? "").slice(0, 4000);
+      if (!src.trim()) return json({ translation: null });
+      const sys = `You are a translator for a Saudi contracting company. Workers often write in Urdu (Urdu script or Roman Urdu like "gaari kharab hai"), Hindi, English, Bengali, Filipino or broken Arabic, using site/vehicle slang. Detect the language and translate the meaning faithfully and naturally. Return JSON only: {"lang":"ISO code e.g. ur, en, ar, hi, bn, tl","lang_name_ar":"اسم اللغة بالعربي","ar":"Arabic translation (Saudi-friendly, clear)","en":"English translation","ur":"Urdu translation in Urdu script, simple words a driver understands"}. Always fill ar, en and ur; for the source language copy the original text as-is.`;
+      const t = parseJson(await claude(sys, [{ role: "user", content: src }], 800));
+      if (body.message_id && t?.ar) await sb.from("room_messages").update({ translation: t }).eq("id", body.message_id);
+      return json({ translation: t });
+    }
+
     if (mode === "room_summary") {
       const { data: room } = await sb.from("rooms").select("title,description").eq("id", body.room_id).single();
       if (!room) return json({ error: "الغرفة غير موجودة" }, 404);
-      const { data: msgs } = await sb.from("room_messages").select("user_id,kind,body,file_name,created_at").eq("room_id", body.room_id).order("created_at").limit(400);
+      const { data: msgs } = await sb.from("room_messages").select("user_id,kind,body,file_name,created_at,translation").eq("room_id", body.room_id).order("created_at").limit(400);
       const ids = [...new Set((msgs ?? []).map((m: any) => m.user_id).filter(Boolean))];
       const { data: ppl } = ids.length ? await sb.from("profiles").select("id,full_name,job_title").in("id", ids) : { data: [] };
       const nm: Record<string, string> = {};
@@ -105,7 +114,7 @@ Deno.serve(async (req) => {
       const log = (msgs ?? []).filter((m: any) => m.kind !== "ai").map((m: any) => {
         const who = nm[m.user_id] ?? "مستخدم";
         const t = new Date(m.created_at).toISOString().slice(0, 16).replace("T", " ");
-        const what = m.kind === "text" ? m.body : m.kind === "image" ? "[أرسل صورة]" : m.kind === "audio" ? "[أرسل رسالة صوتية]" : `[أرسل مستند: ${m.file_name}]`;
+        const what = m.kind === "text" ? (m.translation?.ar && m.translation?.lang !== "ar" ? `${m.body} (الترجمة: ${m.translation.ar})` : m.body) : m.kind === "image" ? "[أرسل صورة]" : m.kind === "audio" ? "[أرسل رسالة صوتية]" : `[أرسل مستند: ${m.file_name}]`;
         return `${t} - ${who}: ${what}`;
       }).join("\n");
       if (!log) return json({ text: "لا توجد رسائل كافية للتلخيص بعد." });
@@ -136,7 +145,7 @@ Deno.serve(async (req) => {
 
     const history = (body.history ?? []).slice(-10).map((m: any) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content) }));
     const roleName = me?.role === "employee" ? "موظف" : "المدير";
-    const sys = `أنت "مساعد يقين"، مساعد ذكاء اصطناعي داخل منصة إدارة شركة "${snap.الشركة}". تتحدث مع ${me?.full_name || "مستخدم"} (${roleName}). أجب بالعربية السعودية الواضحة، مختصراً ومباشراً، معتمداً فقط على البيانات التالية، واحسب الأرقام بدقة. إن لم تكن المعلومة موجودة قل ذلك بوضوح. عند الحاجة اقترح قراراً أو إجراءً عملياً. يمكنك استخدام قوائم قصيرة.\n\n${ctx}`;
+    const sys = `أنت "مساعد يقين"، مساعد ذكاء اصطناعي داخل منصة إدارة شركة "${snap.الشركة}". تتحدث مع ${me?.full_name || "مستخدم"} (${roleName}). أجب بنفس لغة سؤال المستخدم (عربي أو أوردو أو إنجليزي أو غيرها)، وإن كان بالعربي فبالعربية السعودية الواضحة. كن مختصراً ومباشراً، معتمداً فقط على البيانات التالية، واحسب الأرقام بدقة. إن لم تكن المعلومة موجودة قل ذلك بوضوح. عند الحاجة اقترح قراراً أو إجراءً عملياً. يمكنك استخدام قوائم قصيرة.\n\n${ctx}`;
     const text = await claude(sys, [...history, { role: "user", content: String(body.question ?? "") }], 1500);
     return json({ answer: text });
   } catch (e) {

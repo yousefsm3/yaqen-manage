@@ -185,6 +185,11 @@ input[type=range]{width:100%;accent-color:var(--green)}
 .pick{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;cursor:pointer}
 .pick:hover{background:var(--panel2)}
 .pick input{width:18px;height:18px;accent-color:var(--green)}
+.tr{margin-top:7px;padding-top:7px;border-top:1px dashed rgba(255,255,255,.18);font-size:13px}
+.tr div{margin-top:3px}
+.tr .lg{font-size:11px;color:var(--muted);margin-left:6px}
+.trbtn{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;margin-top:4px;padding:0}
+.trbtn:hover{color:var(--green)}
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:90;display:grid;place-items:center;padding:16px}
 .lightbox img{max-width:100%;max-height:100%;border-radius:8px}
 table.t{width:100%;border-collapse:collapse;font-size:14px}
@@ -603,11 +608,22 @@ function viewRoom(id) {
   </div>`;
 }
 
+const needsTr = (t) => /[\u0679\u0688\u0691\u06BA\u06BE\u06C1\u06D2\u06D3]/.test(t) || /[A-Za-z]{3,}/.test(t);
+const LANGS = [["ar", "🇸🇦 عربي"], ["ur", "🇵🇰 اردو"], ["en", "🇬🇧 English"]];
+function trHtml(m) {
+  const t = m.translation;
+  if (t && (t.ar || t.en)) {
+    const rows = LANGS.filter(([k]) => t[k] && t[k].trim() !== (m.body || "").trim());
+    return `<div class="tr">${t.lang && t.lang !== "ar" ? `<div class="lg">🌐 مترجم من ${esc(t.lang_name_ar || t.lang)}</div>` : ""}${rows.map(([k, l]) => `<div><div class="lg">${l}</div><div dir="${k === "en" ? "ltr" : "rtl"}">${esc(t[k])}</div></div>`).join("")}</div>`;
+  }
+  if (S.trPending?.[m.id]) return `<div class="tr"><span class="spin"></span> <span class="lg">جاري الترجمة...</span></div>`;
+  return `<div><button class="trbtn" onclick="Room.translate('${m.id}')">🌐 ترجمة</button></div>`;
+}
 function msgHtml(m) {
   const mine = m.user_id === S.me?.id, p = personById(m.user_id);
   const url = m.file_path ? S.urls[m.file_path] : null;
   let inner;
-  if (m.kind === "text") inner = esc(m.body);
+  if (m.kind === "text") inner = esc(m.body) + trHtml(m);
   else if (m.kind === "ai") inner = `<div class="muted small mb">✨ ملخص يقين الذكي</div>${md(m.body || "")}`;
   else if (m.kind === "image") inner = url ? `<img class="pic" src="${esc(url)}" onclick="Room.zoom('${esc(url)}')">` : `<span class="spin"></span> صورة`;
   else if (m.kind === "audio") inner = url ? `<audio controls preload="metadata" src="${esc(url)}"></audio>` : `<span class="spin"></span> رسالة صوتية`;
@@ -627,6 +643,7 @@ const Room = {
     this.render();
     this.ch = sb.channel("room-" + id)
       .on("postgres_changes", { event:"INSERT", schema:"public", table:"room_messages", filter:`room_id=eq.${id}` }, (p) => this.add(p.new))
+      .on("postgres_changes", { event:"UPDATE", schema:"public", table:"room_messages", filter:`room_id=eq.${id}` }, (p) => { const l = S.roomMsgs[id] || []; const i = l.findIndex((x) => x.id === p.new.id); if (i >= 0) { l[i] = { ...l[i], ...p.new }; this.render(); } })
       .on("postgres_changes", { event:"DELETE", schema:"public", table:"room_messages" }, (p) => { S.roomMsgs[id] = (S.roomMsgs[id] || []).filter((m) => m.id !== p.old.id); this.render(); })
       .subscribe();
   },
@@ -651,12 +668,13 @@ const Room = {
   },
   async post(row) {
     const { data, error } = await sb.from("room_messages").insert({ room_id:this.id, ...row }).select().single();
-    if (error) { toast("خطأ: " + error.message); return; }
-    this.add(data);
+    if (error) { toast("خطأ: " + error.message); return null; }
+    this.add(data); return data;
   },
   async send(e) {
     e.preventDefault(); const i = $("#rmInput"); const t = i.value.trim(); if (!t) return;
-    i.value = ""; await this.post({ kind:"text", body:t }); i.focus();
+    i.value = ""; const m = await this.post({ kind:"text", body:t }); i.focus();
+    if (m && needsTr(t)) this.translate(m.id);
   },
   async upload(blob, name, mime) {
     if (blob.size > 50 * 1048576) { toast("الملف أكبر من ٥٠ ميجا"); return null; }
@@ -713,6 +731,13 @@ const Room = {
         c.appendChild(bar); }
       mic.textContent = "📤"; mic.title = "إرسال التسجيل";
     } else { form?.classList.remove("hidden"); bar?.remove(); if (mic) { mic.textContent = "🎤"; mic.title = "رسالة صوتية"; } }
+  },
+  async translate(mid) {
+    const list = S.roomMsgs[this.id] || []; const m = list.find((x) => x.id === mid); if (!m) return;
+    S.trPending = S.trPending || {}; S.trPending[mid] = true; this.render();
+    try { const { translation } = await ai({ mode:"translate", text:m.body, message_id:mid }); if (translation) m.translation = translation; }
+    catch (err) { toast(err.message); }
+    delete S.trPending[mid]; this.render();
   },
   zoom(url) {
     const d = document.createElement("div"); d.className = "lightbox"; d.innerHTML = `<img src="${esc(url)}">`;
