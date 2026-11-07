@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>منصة الشركة | يقين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1220; --panel:#111A2E; --panel2:#16213A; --line:#22304F; --text:#E8EEF8; --muted:#8C9BB8;
+  --green:#22C55E; --green2:#16A34A; --greenSoft:rgba(34,197,94,.12);
+  --red:#EF4444; --redSoft:rgba(239,68,68,.12); --amber:#F59E0B; --amberSoft:rgba(245,158,11,.12);
+  --blue:#3B82F6; --blueSoft:rgba(59,130,246,.12); --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-size:15px;line-height:1.6}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--green)}
+.hidden{display:none!important}
+
+/* auth */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 500px at 80% -10%,rgba(34,197,94,.15),transparent),var(--bg)}
+.auth-card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;overflow:hidden;flex-shrink:0}
+.logo img{width:100%;height:100%;object-fit:cover}
+.brand h1{font-size:20px;font-weight:700}
+.brand small{color:var(--muted);font-size:12px;display:block}
+.tabs{display:flex;background:var(--panel2);border-radius:12px;padding:4px;margin-bottom:18px}
+.tabs button{flex:1;border:0;background:none;padding:9px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:600}
+.tabs button.on{background:var(--bg);color:var(--text)}
+label.f{display:block;margin-bottom:12px}
+label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.in{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
+.in:focus{border-color:var(--green)}
+textarea.in{min-height:90px;resize:vertical}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;background:var(--panel2);display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap}
+.btn:hover{filter:brightness(1.15)}
+.btn.pri{background:var(--green);color:#04150A}
+.btn.danger{background:var(--redSoft);color:var(--red)}
+.btn.ghost{background:none;border:1px solid var(--line)}
+.btn.ai{background:linear-gradient(135deg,#22C55E,#0EA5E9);color:#03130A}
+.btn.sm{padding:6px 11px;font-size:13px}
+.btn.full{width:100%}
+.btn:disabled{opacity:.5;cursor:default}
+.msg{font-size:13px;margin-top:10px;padding:10px;border-radius:10px;background:var(--panel2)}
+.msg.err{background:var(--redSoft);color:#FCA5A5}
+.msg.ok{background:var(--greenSoft);color:#86EFAC}
+.powered{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
+
+/* shell */
+.shell{display:flex;min-height:100vh}
+.side{width:250px;background:var(--panel);border-left:1px solid var(--line);padding:18px 12px;position:fixed;top:0;bottom:0;right:0;overflow-y:auto;z-index:40;transition:transform .25s}
+.side .brand{padding:0 6px}
+.nav button{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--muted);text-align:right;font-weight:500}
+.nav button:hover{background:var(--panel2);color:var(--text)}
+.nav button.on{background:var(--greenSoft);color:var(--green)}
+.nav .ico{width:22px;text-align:center}
+.nav .sec{font-size:11px;color:var(--muted);opacity:.7;padding:14px 12px 4px}
+.nav .cnt{margin-right:auto;background:var(--redSoft);color:var(--red);font-size:11px;padding:1px 7px;border-radius:20px}
+.main{flex:1;margin-right:250px;min-width:0}
+.top{position:sticky;top:0;z-index:30;background:rgba(11,18,32,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;gap:12px}
+.top h2{font-size:18px;font-weight:700;flex:1}
+.me{display:flex;align-items:center;gap:8px;cursor:pointer}
+.av{width:36px;height:36px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;overflow:hidden;font-weight:700;color:var(--green);flex-shrink:0;font-size:14px}
+.av img{width:100%;height:100%;object-fit:cover}
+.av.lg{width:84px;height:84px;font-size:30px}
+.menu-btn{display:none;border:0;background:var(--panel2);width:38px;height:38px;border-radius:10px;font-size:18px;cursor:pointer}
+.content{padding:22px;max-width:1200px}
+.overlay{display:none}
+
+@media(max-width:900px){
+  .side{transform:translateX(100%)}
+  .side.open{transform:none}
+  .overlay.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:35}
+  .main{margin-right:0}
+  .menu-btn{display:grid;place-items:center}
+  .content{padding:14px}
+  .top{padding:10px 14px}
+  .me .nm{display:none}
+}
+
+/* cards */
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card h3{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.kpi{cursor:pointer;transition:.15s}
+.kpi:hover{border-color:var(--green)}
+.kpi .v{font-size:28px;font-weight:700;line-height:1.2}
+.kpi .l{color:var(--muted);font-size:13px}
+.kpi .s{font-size:12px;margin-top:4px}
+.mt{margin-top:16px}.mb{margin-bottom:16px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sp{flex:1}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.badge{display:inline-block;font-size:12px;padding:2px 9px;border-radius:20px;background:var(--panel2);color:var(--muted);white-space:nowrap}
+.b-green{background:var(--greenSoft);color:#4ADE80}
+.b-red{background:var(--redSoft);color:#F87171}
+.b-amber{background:var(--amberSoft);color:#FBBF24}
+.b-blue{background:var(--blueSoft);color:#60A5FA}
+.list .it{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.list .it:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:8px;flex-shrink:0}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.bar{height:7px;background:var(--panel2);border-radius:10px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--green);border-radius:10px}
+
+/* records */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.toolbar .in{flex:1;min-width:180px}
+.rec{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;transition:.15s}
+.rec:hover{border-color:#2E4370}
+.rec .t{font-weight:700;font-size:15px}
+.rec .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.person{display:flex;align-items:center;gap:12px}
+
+/* ai */
+.ai-hero{background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(14,165,233,.10));border:1px solid rgba(34,197,94,.35);border-radius:18px;padding:18px}
+.ring{width:96px;height:96px;flex-shrink:0;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:24px}
+.risk{border-right:3px solid var(--line);padding:8px 12px;margin-bottom:8px;background:var(--panel2);border-radius:8px}
+.risk.h{border-right-color:var(--red)}.risk.m{border-right-color:var(--amber)}.risk.l{border-right-color:var(--blue)}
+.chat{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:420px}
+.msgs{flex:1;overflow-y:auto;padding:4px 2px 12px;display:flex;flex-direction:column;gap:10px}
+.bub{max-width:85%;padding:11px 14px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
+.bub.u{align-self:flex-start;background:var(--green);color:#04150A;border-bottom-right-radius:4px}
+.bub.a{align-self:flex-end;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
+.bub.a ul{padding-right:18px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer}
+.chip:hover{border-color:var(--green);color:var(--green)}
+.composer{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.composer .in{flex:1}
+.typing span{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin:0 2px;animation:bl 1s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,100%{opacity:.2}50%{opacity:1}}
+.fab{position:fixed;left:18px;bottom:18px;width:58px;height:58px;border-radius:50%;border:0;background:linear-gradient(135deg,#22C55E,#0EA5E9);font-size:24px;cursor:pointer;box-shadow:0 10px 30px rgba(34,197,94,.35);z-index:25}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:700px){.modal{align-items:center}}
+.sheet{background:var(--panel);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:20px;border:1px solid var(--line)}
+@media(min-width:700px){.sheet{border-radius:20px}}
+.sheet h3{font-size:17px;margin-bottom:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media(max-width:500px){.two{grid-template-columns:1fr}}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 18px;border-radius:12px;z-index:80;font-size:14px}
+.spin{width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t td,table.t th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right}
+table.t th{color:var(--muted);font-weight:500;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal-root"></div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+// ===== Settings: Supabase project of the platform =====
+const SUPABASE_URL = "https://zalfumkzlnpygvemxayb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_IeygDMV4GdMRU4it2FfJ9A_WqP0Al09";
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmtNum = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString("ar-SA"));
+const fmtSAR = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString("ar-SA") + " ر.س");
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const daysLeft = (d) => (d ? Math.round((new Date(d) - today()) / 86400000) : null);
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-SA-u-ca-gregory", { year:"numeric", month:"short", day:"numeric" }) : "-");
+const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("");
+
+const S = { session:null, me:null, settings:{ company_name:"منصة الشركة" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login" };
+const isAdmin = () => S.me?.role === "admin";
+const depName = (id) => S.deps.find((d) => d.id === id)?.name ?? "بدون قسم";
+const depByName = (n) => S.deps.find((d) => d.name === n)?.id;
+
+// ===== Entity definitions =====
+const ENT = {
+  vehicles: { title:"الأسطول والمعدات", icon:"🚚", one:"مركبة / معدة", def:"الأسطول والمعدات", primary:"plate",
+    sub:(r) => [r.kind, r.model, r.driver_name && "السائق: " + r.driver_name].filter(Boolean).join(" · "),
+    status:"status", statusColor:{ "شغالة":"b-green", "متوقفة":"b-red", "صيانة":"b-amber" },
+    fields:[
+      { k:"plate", l:"رقم اللوحة", req:1 }, { k:"kind", l:"النوع", ph:"ونيت، رافعة، شيول..." },
+      { k:"model", l:"الموديل والسنة" }, { k:"status", l:"الحالة", t:"select", o:["شغالة","متوقفة","صيانة"] },
+      { k:"driver_name", l:"اسم السائق" }, { k:"driver_phone", l:"جوال السائق" },
+      { k:"location", l:"الموقع الحالي", ph:"مثال: موقع أرامكو - أبقيق" },
+      { k:"registration_expiry", l:"انتهاء الاستمارة", t:"date", exp:1 },
+      { k:"insurance_expiry", l:"انتهاء التأمين", t:"date", exp:1 },
+      { k:"license_expiry", l:"انتهاء رخصة السائق", t:"date", exp:1 },
+      { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
+  projects: { title:"المشاريع", icon:"🏗️", one:"مشروع", def:"المشاريع", primary:"name",
+    sub:(r) => [r.client, r.po_number && "PO: " + r.po_number].filter(Boolean).join(" · "),
+    status:"status", statusColor:{ "جاري":"b-blue", "متأخر":"b-red", "مكتمل":"b-green", "معلق":"b-amber" }, progress:"progress",
+    fields:[
+      { k:"name", l:"اسم المشروع", req:1, wide:1 }, { k:"client", l:"العميل" }, { k:"po_number", l:"رقم أمر الشراء (PO)" },
+      { k:"contract_value", l:"قيمة العقد (ر.س)", t:"number" }, { k:"progress", l:"نسبة الإنجاز %", t:"number" },
+      { k:"status", l:"الحالة", t:"select", o:["جاري","متأخر","مكتمل","معلق"] },
+      { k:"start_date", l:"تاريخ البداية", t:"date" }, { k:"end_date", l:"تاريخ التسليم", t:"date", deadline:1 },
+      { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
+  legal_cases: { title:"القضايا", icon:"⚖️", one:"قضية", def:"القانونية", primary:"title",
+    sub:(r) => [r.case_number && "رقم " + r.case_number, r.court, r.lawyer && "المحامي: " + r.lawyer].filter(Boolean).join(" · "),
+    status:"status", statusColor:{ "مفتوحة":"b-blue", "قيد النظر":"b-amber", "مؤجلة":"b-amber", "مغلقة":"b-green" },
+    fields:[
+      { k:"title", l:"عنوان القضية", req:1, wide:1 }, { k:"case_number", l:"رقم القضية" }, { k:"court", l:"المحكمة / الجهة" },
+      { k:"opponent", l:"الطرف الآخر" }, { k:"lawyer", l:"المحامي المسؤول" },
+      { k:"status", l:"الحالة", t:"select", o:["مفتوحة","قيد النظر","مؤجلة","مغلقة"] },
+      { k:"next_hearing", l:"الجلسة القادمة", t:"date", hearing:1 },
+      { k:"last_update", l:"آخر المستجدات", t:"textarea", wide:1 } ] },
+  invoices: { title:"الفواتير", icon:"🧾", one:"فاتورة", def:"المالية", primary:"number",
+    sub:(r) => [r.kind, r.party, fmtSAR(r.amount)].filter(Boolean).join(" · "),
+    status:"status", statusColor:{ "مدفوعة":"b-green", "غير مدفوعة":"b-amber", "متأخرة":"b-red" },
+    fields:[
+      { k:"number", l:"رقم الفاتورة", req:1 }, { k:"kind", l:"النوع", t:"select", o:["صادرة","واردة"] },
+      { k:"party", l:"الجهة" }, { k:"amount", l:"المبلغ (ر.س)", t:"number" },
+      { k:"due_date", l:"تاريخ الاستحقاق", t:"date", due:1 },
+      { k:"status", l:"الحالة", t:"select", o:["غير مدفوعة","مدفوعة","متأخرة"] } ] },
+  documents: { title:"الوثائق والتراخيص", icon:"📄", one:"وثيقة", def:"السلامة والامتثال", primary:"name",
+    sub:(r) => [r.doc_type].filter(Boolean).join(" · "),
+    fields:[
+      { k:"name", l:"اسم الوثيقة", req:1, wide:1, ph:"السجل التجاري، تأهيل أرامكو، شهادة سلامة..." },
+      { k:"doc_type", l:"النوع" }, { k:"expiry_date", l:"تاريخ الانتهاء", t:"date", exp:1 },
+      { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
+  requests: { title:"الطلبات", icon:"📥", one:"طلب", def:null, primary:"title",
+    sub:(r) => (r.details || "").slice(0, 90),
+    status:"status", statusColor:{ "جديد":"b-blue", "قيد التنفيذ":"b-amber", "معتمد":"b-green", "مرفوض":"b-red", "منجز":"b-green" },
+    fields:[
+      { k:"title", l:"عنوان الطلب", req:1, wide:1 }, { k:"details", l:"التفاصيل", t:"textarea", wide:1 },
+      { k:"priority", l:"الأولوية", t:"select", o:["عاجل","عادي","منخفض"] },
+      { k:"status", l:"الحالة", t:"select", o:["جديد","قيد التنفيذ","معتمد","مرفوض","منجز"] } ] },
+};
+const AI_EXTRACT = ["vehicles","invoices","documents","legal_cases","projects"];
+
+// ===== Data =====
+async function loadAll() {
+  const [st, dp, pp, notes, ...rest] = await Promise.all([
+    sb.from("settings").select("*").single(),
+    sb.from("departments").select("*").order("created_at"),
+    sb.from("profiles").select("*").order("created_at"),
+    sb.from("manager_notes").select("*").order("created_at", { ascending:false }),
+    ...Object.keys(ENT).map((k) => sb.from(k).select("*").order("updated_at", { ascending:false, nullsFirst:false })),
+  ]);
+  if (st.data) S.settings = st.data;
+  S.deps = dp.data ?? [];
+  S.people = pp.data ?? [];
+  S.data.manager_notes = notes.data ?? [];
+  Object.keys(ENT).forEach((k, i) => (S.data[k] = rest[i].data ?? []));
+  S.me = S.people.find((p) => p.id === S.session.user.id) ?? S.me;
+  document.title = S.settings.company_name + " | يقين";
+}
+async function loadPublic() {
+  try {
+    const [st, dp] = await Promise.all([sb.from("settings").select("*").single(), sb.from("departments").select("*").order("created_at")]);
+    if (st.data) S.settings = st.data;
+    S.deps = dp.data ?? [];
+    S.netErr = !!(dp.error && !dp.data);
+  } catch { S.netErr = true; }
+}
+
+function toast(t) {
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = t;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 2600);
+}
+
+async function resizeImage(file, max = 1600, q = 0.85) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  const s = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = img.width * s; c.height = img.height * s;
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((res) => c.toBlob(res, "image/jpeg", q));
+}
+const blobToB64 = (b) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.readAsDataURL(b); });
+
+async function uploadImage(file, folder) {
+  const blob = await resizeImage(file, 600, 0.85);
+  const path = `${folder}/${Date.now()}.jpg`;
+  const { error } = await sb.storage.from("avatars").upload(path, blob, { contentType:"image/jpeg", upsert:true });
+  if (error) throw error;
+  return sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+}
+
+async function ai(body) {
+  const { data, error } = await sb.functions.invoke("yaqen-ai", { body });
+  if (error) {
+    let msg = error.message;
+    try { const j = await error.context.json(); msg = j.error || msg; } catch {}
+    if (msg === "NO_KEY") throw new Error("الذكاء الاصطناعي غير مفعّل بعد. يحتاج المسؤول إضافة مفتاح ANTHROPIC_API_KEY في إعدادات Supabase.");
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ===== Computed alerts =====
+function computeAlerts() {
+  const out = [];
+  const push = (lvl, text, view, dep) => out.push({ lvl, text, view, dep });
+  for (const [k, cfg] of Object.entries(ENT)) {
+    for (const r of S.data[k] ?? []) {
+      const name = r[cfg.primary];
+      for (const f of cfg.fields) {
+        const v = r[f.k]; if (!v) continue; const d = daysLeft(v);
+        if (f.exp) {
+          if (d < 0) push("h", `${f.l} منتهي: ${name} (منذ ${-d} يوم)`, k, r.department_id);
+          else if (d <= 30) push(d <= 7 ? "h" : "m", `${f.l} بعد ${d} يوم: ${name}`, k, r.department_id);
+        }
+        if (f.hearing && r.status !== "مغلقة" && d >= 0 && d <= 14) push(d <= 3 ? "h" : "m", `جلسة قضية "${name}" بعد ${d} يوم`, k, r.department_id);
+        if (f.due && r.status !== "مدفوعة" && d < 0) push("h", `فاتورة ${name} متأخرة ${-d} يوم (${fmtSAR(r.amount)})`, k, r.department_id);
+        if (f.deadline && r.status !== "مكتمل" && d < 0) push("h", `مشروع "${name}" تجاوز موعد التسليم`, k, r.department_id);
+      }
+      if (k === "vehicles" && r.status !== "شغالة") push("m", `${r.plate} ${r.status}${r.location ? " - " + r.location : ""}`, k, r.department_id);
+      if (k === "projects" && r.status === "متأخر") push("h", `مشروع "${name}" متأخر (${r.progress ?? 0}%)`, k, r.department_id);
+      if (k === "requests" && r.priority === "عاجل" && !["منجز","مرفوض"].includes(r.status)) push("m", `طلب عاجل: ${name}`, k, r.department_id);
+    }
+  }
+  for (const n of S.data.manager_notes ?? []) if (n.status === "مفتوحة") push("l", `ملاحظة مدير بانتظار الرد: ${n.subject || n.body.slice(0, 40)}`, "notes", n.department_id);
+  const rank = { h:0, m:1, l:2 };
+  return out.sort((a, b) => rank[a.lvl] - rank[b.lvl]);
+}
+
+// ===== Auth view =====
+function renderAuth(message) {
+  const s = S.settings;
+  $("#app").innerHTML = `
+  <div class="auth"><div class="auth-card">
+    <div class="brand">
+      <div class="logo">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
+      <div><h1>${esc(s.company_name)}</h1><small>منصة الإدارة الذكية</small></div>
+    </div>
+    <div class="tabs">
+      <button class="${S.authTab === "login" ? "on" : ""}" onclick="App.authTab('login')">تسجيل الدخول</button>
+      <button class="${S.authTab === "signup" ? "on" : ""}" onclick="App.authTab('signup')">حساب جديد</button>
+    </div>
+    ${S.authTab === "login" ? `
+      <form onsubmit="App.login(event)">
+        <label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
+        <label class="f"><span>كلمة المرور</span><input class="in" name="password" type="password" required dir="ltr"></label>
+        <button class="btn pri full">دخول</button>
+      </form>` : `
+      <form onsubmit="App.signup(event)">
+        <label class="f"><span>الاسم الكامل</span><input class="in" name="full_name" required></label>
+        <div class="two">
+          <label class="f"><span>القسم</span><select class="in" name="department_id" required>
+            <option value="">اختر القسم</option>${S.deps.map((d) => `<option value="${d.id}">${esc(d.icon)} ${esc(d.name)}</option>`).join("")}
+          </select></label>
+          <label class="f"><span>المسمى الوظيفي</span><input class="in" name="job_title"></label>
+        </div>
+        <label class="f"><span>رقم الجوال</span><input class="in" name="phone" dir="ltr"></label>
+        <label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
+        <label class="f"><span>كلمة المرور (6 أحرف أو أكثر)</span><input class="in" name="password" type="password" minlength="6" required dir="ltr"></label>
+        <button class="btn pri full">إنشاء الحساب</button>
+        <p class="muted small mt">أول حساب يُنشأ في المنصة يصبح حساب المدير.</p>
+      </form>`}
+    ${message ? `<div class="msg ${message.t}">${esc(message.m)}</div>` : ""}
+    ${S.netErr || (S.authTab === "signup" && !S.deps.length) ? `<div class="msg err">تعذّر الاتصال بخادم المنصة. افتح المنصة من رابطها على الإنترنت (مثل manage.yaqenai.com) وليس من معاينة الملف.
+      <button class="btn sm mt" onclick="App.retry()">↻ إعادة المحاولة</button></div>` : ""}
+    <div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div>
+  </div></div>`;
+}
+
+// ===== Shell =====
+function navItems() {
+  const alerts = computeAlerts();
+  const cnt = (v) => alerts.filter((a) => a.view === v).length;
+  const openNotes = (S.data.manager_notes ?? []).filter((n) => n.status === "مفتوحة").length;
+  return [
+    { sec:"عام" },
+    { v:"home", i:"🏠", l:"لوحة القيادة" },
+    { v:"ai", i:"✨", l:"مساعد يقين الذكي" },
+    { v:"notes", i:"📌", l:"ملاحظات المدير", c:openNotes },
+    { sec:"الشركة" },
+    { v:"departments", i:"🏢", l:isAdmin() ? "الأقسام" : "قسمي" },
+    { v:"people", i:"👥", l:"الموظفين" },
+    { sec:"العمليات" },
+    ...Object.entries(ENT).map(([k, c]) => ({ v:k, i:c.icon, l:c.title, c:cnt(k) })),
+    { sec:"الحساب" },
+    { v:"profile", i:"👤", l:"ملفي الشخصي" },
+    ...(isAdmin() ? [{ v:"settings", i:"⚙️", l:"إعدادات المنصة" }] : []),
+  ];
+}
+function titleOf(v) {
+  return ({ home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
+}
+function renderShell() {
+  const s = S.settings, me = S.me;
+  $("#app").innerHTML = `
+  <div class="shell">
+    <div class="overlay" id="ov" onclick="App.menu(false)"></div>
+    <aside class="side" id="side">
+      <div class="brand">
+        <div class="logo">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
+        <div><h1 style="font-size:16px">${esc(s.company_name)}</h1><small>${isAdmin() ? "حساب المدير" : esc(depName(me?.department_id))}</small></div>
+      </div>
+      <nav class="nav">${navItems().map((n) => n.sec ? `<div class="sec">${n.sec}</div>` :
+        `<button class="${S.view === n.v ? "on" : ""}" onclick="App.go('${n.v}')"><span class="ico">${n.i}</span>${n.l}${n.c ? `<span class="cnt">${n.c}</span>` : ""}</button>`).join("")}
+        <div class="sec"></div>
+        <button onclick="App.logout()"><span class="ico">🚪</span>تسجيل الخروج</button>
+      </nav>
+      <div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div>
+    </aside>
+    <main class="main">
+      <div class="top">
+        <button class="menu-btn" onclick="App.menu(true)">☰</button>
+        <h2>${esc(titleOf(S.view))}</h2>
+        <div class="me" onclick="App.go('profile')">
+          <span class="nm small">${esc(me?.full_name)}</span>${avatar(me)}
+        </div>
+      </div>
+      <div class="content" id="content"></div>
+    </main>
+  </div>
+  ${S.view !== "ai" ? `<button class="fab" title="اسأل مساعد يقين" onclick="App.go('ai')">✨</button>` : ""}`;
+  renderView();
+}
+function avatar(p, cls = "") {
+  return `<div class="av ${cls}">${p?.avatar_url ? `<img src="${esc(p.avatar_url)}">` : esc(initials(p?.full_name))}</div>`;
+}
+
+function renderView() {
+  const c = $("#content");
+  const v = S.view;
+  if (v === "home") c.innerHTML = viewHome();
+  else if (v === "ai") c.innerHTML = viewAI();
+  else if (v === "notes") c.innerHTML = viewNotes();
+  else if (v === "departments") c.innerHTML = isAdmin() ? viewDepartments() : viewDept(S.me?.department_id);
+  else if (v === "dept") c.innerHTML = viewDept(S.param);
+  else if (v === "people") c.innerHTML = viewPeople();
+  else if (v === "profile") c.innerHTML = viewProfile();
+  else if (v === "settings") c.innerHTML = viewSettings();
+  else if (ENT[v]) c.innerHTML = viewEntity(v);
+  if (v === "ai") { const m = $("#msgs"); if (m) m.scrollTop = m.scrollHeight; }
+}
+
+// ===== Home =====
+function viewHome() {
+  const d = S.data, alerts = computeAlerts();
+  const veh = d.vehicles ?? [], prj = d.projects ?? [], cases = d.legal_cases ?? [], inv = d.invoices ?? [];
+  const active = veh.filter((v) => v.status === "شغالة").length;
+  const overdue = inv.filter((i) => i.status !== "مدفوعة" && daysLeft(i.due_date) < 0);
+  const receivable = inv.filter((i) => i.kind === "صادرة" && i.status !== "مدفوعة").reduce((a, b) => a + Number(b.amount || 0), 0);
+  const openCases = cases.filter((c) => c.status !== "مغلقة").length;
+  const runPrj = prj.filter((p) => p.status !== "مكتمل");
+  const avgProg = runPrj.length ? Math.round(runPrj.reduce((a, b) => a + (b.progress || 0), 0) / runPrj.length) : 0;
+  const hi = alerts.filter((a) => a.lvl === "h").length;
+  const kpi = (v, l, s, view, cls = "") => `<div class="card kpi" onclick="App.go('${view}')"><div class="v">${v}</div><div class="l">${l}</div>${s ? `<div class="s ${cls}">${s}</div>` : ""}</div>`;
+  const greet = new Date().getHours() < 12 ? "صباح الخير" : "مساء الخير";
+  return `
+  <div class="row mb"><div><div style="font-size:20px;font-weight:700">${greet}، ${esc((S.me?.full_name || "").split(" ")[0])} 👋</div>
+    <div class="muted small">${new Date().toLocaleDateString("ar-SA-u-ca-gregory", { weekday:"long", day:"numeric", month:"long", year:"numeric" })}</div></div></div>
+
+  ${briefCard()}
+
+  <div class="grid g4 mt">
+    ${kpi(fmtNum(S.people.length), "الموظفين", `${S.deps.length} أقسام`, "people")}
+    ${kpi(`${active}<span class="muted" style="font-size:16px"> / ${veh.length}</span>`, "مركبات ومعدات شغالة", veh.length - active ? `${veh.length - active} متوقفة أو صيانة` : "كلها شغالة", "vehicles", veh.length - active ? "b-amber" : "")}
+    ${kpi(runPrj.length, "مشاريع جارية", `متوسط الإنجاز ${avgProg}%`, "projects")}
+    ${kpi(openCases, "قضايا مفتوحة", "", "legal_cases")}
+    ${kpi(fmtSAR(receivable), "مستحقات لم تُحصّل", overdue.length ? `${overdue.length} فواتير متأخرة` : "", "invoices", "b-red")}
+    ${kpi(hi, "تنبيهات عاجلة", alerts.length + " تنبيه إجمالاً", "home", hi ? "b-red" : "")}
+  </div>
+
+  <div class="grid g2 mt">
+    <div class="card"><h3>🔔 يحتاج انتباهك</h3>
+      <div class="list">${alerts.length ? alerts.slice(0, 10).map((a) => `
+        <div class="it" style="cursor:pointer" onclick="App.go('${a.view}')"><span class="dot" style="background:${a.lvl === "h" ? "var(--red)" : a.lvl === "m" ? "var(--amber)" : "var(--blue)"}"></span>
+        <div><div>${esc(a.text)}</div><div class="muted small">${esc(depName(a.dep))}</div></div></div>`).join("") : `<div class="empty">لا توجد تنبيهات، كل شيء تحت السيطرة ✅</div>`}
+      </div></div>
+    <div class="card"><h3>🏗️ تقدّم المشاريع</h3>
+      ${runPrj.length ? runPrj.slice(0, 6).map((p) => `
+        <div class="mb" style="cursor:pointer" onclick="App.edit('projects','${p.id}')">
+          <div class="row"><b>${esc(p.name)}</b><span class="sp"></span><span class="badge ${ENT.projects.statusColor[p.status] || ""}">${esc(p.status)}</span></div>
+          <div class="bar"><i style="width:${p.progress || 0}%;${p.status === "متأخر" ? "background:var(--red)" : ""}"></i></div>
+          <div class="muted small">${p.progress || 0}% · التسليم ${fmtDate(p.end_date)}</div>
+        </div>`).join("") : `<div class="empty">أضف أول مشروع <br><button class="btn sm mt" onclick="App.edit('projects')">+ مشروع</button></div>`}
+    </div>
+  </div>
+  ${isAdmin() ? `<div class="card mt"><h3>🏢 الأقسام</h3><div class="grid g4">${S.deps.map((dp) => deptMini(dp)).join("")}</div></div>` : ""}`;
+}
+function deptMini(dp) {
+  const n = S.people.filter((p) => p.department_id === dp.id).length;
+  const recs = Object.keys(ENT).reduce((a, k) => a + (S.data[k] ?? []).filter((r) => r.department_id === dp.id).length, 0);
+  const al = computeAlerts().filter((a) => a.dep === dp.id && a.lvl === "h").length;
+  return `<div class="card kpi" style="background:var(--panel2)" onclick="App.go('dept','${dp.id}')">
+    <div style="font-size:24px">${esc(dp.icon)}</div><b>${esc(dp.name)}</b>
+    <div class="muted small">${n} موظف · ${recs} سجل</div>${al ? `<div class="s"><span class="badge b-red">${al} عاجل</span></div>` : ""}</div>`;
+}
+
+function briefCard() {
+  const b = S.brief;
+  if (!b) return `
+  <div class="ai-hero"><div class="row">
+    <div style="font-size:34px">✨</div>
+    <div class="sp"><b style="font-size:16px">التقرير التنفيذي الذكي</b>
+      <div class="muted small">يقرأ يقين كل بيانات الشركة ويطلع لك المخاطر قبل ما تصير، ويقترح عليك قرارات اليوم.</div></div>
+    <button class="btn ai" id="briefBtn" onclick="App.brief()">حلّل وضع الشركة الآن</button>
+  </div></div>`;
+  if (b.error) return `<div class="ai-hero"><div class="msg err">${esc(b.error)}</div><button class="btn ai mt" onclick="App.brief()">إعادة المحاولة</button></div>`;
+  const score = Math.max(0, Math.min(100, Number(b.score) || 0));
+  const col = score >= 75 ? "var(--green)" : score >= 50 ? "var(--amber)" : "var(--red)";
+  const C = 2 * Math.PI * 42;
+  const lv = (l) => (l === "عالي" ? "h" : l === "متوسط" ? "m" : "l");
+  return `
+  <div class="ai-hero">
+    <div class="row" style="align-items:center">
+      <div class="ring"><svg width="96" height="96"><circle cx="48" cy="48" r="42" stroke="#22304F" stroke-width="8" fill="none"/>
+        <circle cx="48" cy="48" r="42" stroke="${col}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - score / 100)}"/></svg><b>${score}</b></div>
+      <div class="sp" style="min-width:200px"><div class="muted small">مؤشر صحة الشركة · تحليل يقين AI</div>
+        <div style="font-size:17px;font-weight:700;margin-top:4px">${esc(b.headline)}</div></div>
+      <button class="btn ghost sm" onclick="App.brief()">↻ تحديث</button>
+    </div>
+    ${(b.kpis ?? []).length ? `<div class="grid g4 mt">${b.kpis.slice(0, 4).map((k) => `<div class="card" style="padding:12px"><div class="muted small">${esc(k.label)}</div><b>${esc(k.value)}</b></div>`).join("")}</div>` : ""}
+    <div class="grid g2 mt">
+      <div><h3 style="font-size:14px;margin-bottom:8px">⚠️ المخاطر</h3>
+        ${(b.risks ?? []).map((r) => `<div class="risk ${lv(r.level)}"><div class="row"><b>${esc(r.title)}</b><span class="sp"></span><span class="badge ${lv(r.level) === "h" ? "b-red" : lv(r.level) === "m" ? "b-amber" : "b-blue"}">${esc(r.level)}</span></div><div class="small muted">${esc(r.detail)}${r.department ? " · " + esc(r.department) : ""}</div></div>`).join("") || `<div class="muted small">لا توجد مخاطر واضحة.</div>`}
+      </div>
+      <div><h3 style="font-size:14px;margin-bottom:8px">✅ قرارات مقترحة لليوم</h3>
+        ${(b.actions ?? []).map((a, i) => `<div class="risk" style="border-right-color:var(--green)"><b>${i + 1}. ${esc(a.title)}</b><div class="small muted">${esc(a.why)}</div>
+          ${isAdmin() && a.department && depByName(a.department) ? `<button class="btn sm ghost mt" onclick='App.noteFromAI(${JSON.stringify(depByName(a.department))}, ${JSON.stringify(a.title)}, ${JSON.stringify(a.why || "")})'>📌 أرسلها ملاحظة لـ${esc(a.department)}</button>` : ""}</div>`).join("")}
+      </div>
+    </div>
+    ${(b.insights ?? []).length ? `<div class="mt"><h3 style="font-size:14px;margin-bottom:6px">💡 ملاحظات ذكية</h3>${b.insights.map((t) => `<div class="small" style="margin-bottom:4px">• ${esc(t)}</div>`).join("")}</div>` : ""}
+  </div>`;
+}
+
+// ===== AI chat =====
+const SUGGEST = ["وش أهم ٣ أشياء لازم أتابعها اليوم؟", "كم سيارة متوقفة ووين مواقعها؟", "وش الوثائق اللي بتنتهي خلال شهر؟", "لخص لي وضع القضايا", "كم مستحقاتنا اللي ما انسددت؟", "أي مشروع فيه خطر تأخير؟"];
+function viewAI() {
+  return `<div class="chat">
+    <div class="msgs" id="msgs">
+      ${!S.chat.length ? `<div class="empty"><div style="font-size:42px">✨</div><b style="font-size:17px;color:var(--text)">مساعد يقين الذكي</b>
+        <p class="small mt">اسألني أي شي عن الشركة بالعربي، أنا مطلع على الموظفين والأسطول والمشاريع والقضايا والفواتير والوثائق${isAdmin() ? " في كل الأقسام" : " في قسمك"}.</p></div>` : ""}
+      ${S.chat.map((m) => `<div class="bub ${m.role === "user" ? "u" : "a"}">${m.role === "user" ? esc(m.content) : md(m.content)}</div>`).join("")}
+      ${S.chatBusy ? `<div class="bub a typing"><span></span><span></span><span></span></div>` : ""}
+    </div>
+    ${!S.chat.length ? `<div class="chips">${SUGGEST.map((q) => `<button class="chip" onclick='App.ask(${JSON.stringify(q)})'>${esc(q)}</button>`).join("")}</div>` : ""}
+    <form class="composer" onsubmit="App.ask(null, event)">
+      <input class="in" id="q" placeholder="اكتب سؤالك..." autocomplete="off" ${S.chatBusy ? "disabled" : ""}>
+      <button class="btn pri" ${S.chatBusy ? "disabled" : ""}>إرسال</button>
+    </form></div>`;
+}
+function md(t) {
+  let h = esc(t);
+  h = h.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  h = h.replace(/^#{1,4}\s*(.+)$/gm, "<b>$1</b>");
+  h = h.replace(/^\s*[-•*]\s+(.+)$/gm, "• $1");
+  return h;
+}
+
+// ===== Notes =====
+function viewNotes() {
+  const notes = S.data.manager_notes ?? [];
+  const col = { "مفتوحة":"b-amber", "تم الرد":"b-blue", "منجزة":"b-green" };
+  return `
+  <div class="toolbar">${isAdmin() ? `<button class="btn pri" onclick="App.noteForm()">+ ملاحظة لقسم</button>` : `<div class="muted small">ملاحظات المدير الموجهة لقسمك. رد عليها ليتابعها المدير.</div>`}</div>
+  ${notes.length ? `<div class="grid">${notes.map((n) => `
+    <div class="card">
+      <div class="row"><span class="badge">${esc(depName(n.department_id))}</span><span class="badge ${col[n.status]}">${esc(n.status)}</span>
+        ${n.due_date ? `<span class="badge ${daysLeft(n.due_date) < 0 && n.status !== "منجزة" ? "b-red" : ""}">المطلوب قبل ${fmtDate(n.due_date)}</span>` : ""}<span class="sp"></span>
+        <span class="muted small">${fmtDate(n.created_at)}</span></div>
+      ${n.subject ? `<b style="display:block;margin-top:10px">${esc(n.subject)}</b>` : ""}
+      <div style="margin-top:6px;white-space:pre-wrap">${esc(n.body)}</div>
+      ${n.reply ? `<div class="risk mt" style="border-right-color:var(--blue)"><div class="muted small">رد القسم ${n.replied_by ? "· " + esc(S.people.find((p) => p.id === n.replied_by)?.full_name || "") : ""}</div>${esc(n.reply)}</div>` : ""}
+      <div class="row mt">
+        ${n.status !== "منجزة" ? `<button class="btn sm" onclick="App.replyForm('${n.id}')">💬 ${n.reply ? "تعديل الرد" : "رد"}</button>` : ""}
+        ${isAdmin() && n.status !== "منجزة" ? `<button class="btn sm ghost" onclick="App.noteStatus('${n.id}','منجزة')">✔ إغلاق كمنجزة</button>` : ""}
+        ${isAdmin() ? `<button class="btn sm danger" onclick="App.delNote('${n.id}')">حذف</button>` : ""}
+      </div>
+    </div>`).join("")}</div>` : `<div class="card empty">لا توجد ملاحظات بعد.</div>`}`;
+}
+
+// ===== Departments =====
+function viewDepartments() {
+  return `<div class="grid g3">${S.deps.map((dp) => deptMini(dp)).join("")}</div>`;
+}
+function viewDept(id) {
+  if (!id) return `<div class="card empty">لم يتم تحديد قسمك بعد. حدّث ملفك الشخصي.<br><button class="btn mt" onclick="App.go('profile')">ملفي</button></div>`;
+  const dp = S.deps.find((d) => d.id === id) || {};
+  const staff = S.people.filter((p) => p.department_id === id);
+  const notes = (S.data.manager_notes ?? []).filter((n) => n.department_id === id);
+  const alerts = computeAlerts().filter((a) => a.dep === id);
+  return `
+  <div class="row mb"><div style="font-size:30px">${esc(dp.icon)}</div><div class="sp"><div style="font-size:19px;font-weight:700">${esc(dp.name)}</div><div class="muted small">${staff.length} موظف</div></div>
+    ${isAdmin() ? `<button class="btn pri" onclick="App.noteForm('${id}')">📌 ملاحظة لهذا القسم</button>` : ""}</div>
+  <div class="grid g4 mb">${Object.entries(ENT).map(([k, c]) => { const n = (S.data[k] ?? []).filter((r) => r.department_id === id).length; return n ? `<div class="card kpi" onclick="App.go('${k}','${id}')"><div style="font-size:20px">${c.icon}</div><div class="v" style="font-size:22px">${n}</div><div class="l">${c.title}</div></div>` : ""; }).join("")}</div>
+  <div class="grid g2">
+    <div class="card"><h3>👥 الموظفين</h3><div class="list">${staff.map(personRow).join("") || `<div class="empty">لا يوجد موظفين</div>`}</div></div>
+    <div><div class="card"><h3>🔔 تنبيهات القسم</h3><div class="list">${alerts.map((a) => `<div class="it"><span class="dot" style="background:${a.lvl === "h" ? "var(--red)" : "var(--amber)"}"></span><div>${esc(a.text)}</div></div>`).join("") || `<div class="muted small">لا توجد تنبيهات</div>`}</div></div>
+      <div class="card mt"><h3>📌 ملاحظات المدير</h3><div class="list">${notes.map((n) => `<div class="it"><div class="sp"><b>${esc(n.subject || "")}</b><div class="small">${esc(n.body)}</div>${n.reply ? `<div class="small muted">الرد: ${esc(n.reply)}</div>` : ""}</div><span class="badge">${esc(n.status)}</span></div>`).join("") || `<div class="muted small">لا توجد ملاحظات</div>`}</div></div></div>
+  </div>`;
+}
+function personRow(p) {
+  return `<div class="it person" ${isAdmin() ? `style="cursor:pointer" onclick="App.personForm('${p.id}')"` : ""}>${avatar(p)}
+    <div class="sp"><b>${esc(p.full_name || "بدون اسم")}</b>${p.role === "admin" ? ` <span class="badge b-green">مدير</span>` : ""}
+    <div class="muted small">${esc(p.job_title || "")}${p.phone ? " · " + esc(p.phone) : ""}</div></div></div>`;
+}
+
+// ===== People =====
+function viewPeople() {
+  const q = (S.peopleQ || "").trim();
+  const list = S.people.filter((p) => !q || [p.full_name, p.job_title, p.email, depName(p.department_id)].join(" ").includes(q));
+  return `
+  <div class="toolbar"><input class="in" placeholder="بحث بالاسم أو القسم..." value="${esc(q)}" oninput="App.peopleSearch(this.value)"></div>
+  ${!isAdmin() ? `<p class="muted small mb">تشاهد زملاءك في قسمك فقط.</p>` : ""}
+  <div class="grid g3">${list.map((p) => `
+    <div class="rec" ${isAdmin() ? `onclick="App.personForm('${p.id}')"` : ""}><div class="person">${avatar(p)}
+      <div class="sp"><div class="t">${esc(p.full_name || "بدون اسم")}</div><div class="muted small">${esc(p.job_title || "")}</div></div></div>
+      <div class="meta"><span class="badge">${esc(depName(p.department_id))}</span>${p.role === "admin" ? `<span class="badge b-green">مدير</span>` : ""}${p.phone ? `<span class="badge" dir="ltr">${esc(p.phone)}</span>` : ""}</div>
+    </div>`).join("")}</div>`;
+}
+
+// ===== Entity list =====
+function viewEntity(k) {
+  const cfg = ENT[k];
+  const q = (S.q?.[k] || "").trim();
+  const depF = S.param && S.view === k ? S.param : "";
+  let rows = (S.data[k] ?? []).filter((r) => (!depF || r.department_id === depF) && (!q || Object.values(r).join(" ").includes(q)));
+  const st = S.f?.[k] || "";
+  if (st) rows = rows.filter((r) => r[cfg.status] === st);
+  return `
+  <div class="toolbar">
+    <input class="in" placeholder="بحث..." value="${esc(q)}" oninput="App.search('${k}', this.value)">
+    ${cfg.status ? `<select class="in" style="flex:0 0 150px" onchange="App.filter('${k}', this.value)"><option value="">كل الحالات</option>${cfg.fields.find((f) => f.k === cfg.status).o.map((o) => `<option ${o === st ? "selected" : ""}>${o}</option>`).join("")}</select>` : ""}
+    <button class="btn pri" onclick="App.edit('${k}')">+ ${cfg.one}</button>
+  </div>
+  ${depF ? `<div class="mb"><span class="badge b-blue">قسم: ${esc(depName(depF))}</span> <a href="#" onclick="App.go('${k}');return false" class="small">عرض الكل</a></div>` : ""}
+  ${rows.length ? `<div class="grid g3">${rows.map((r) => recCard(k, r)).join("")}</div>` :
+    `<div class="card empty"><div style="font-size:34px">${cfg.icon}</div>لا توجد سجلات بعد<br>
+     <button class="btn pri mt" onclick="App.edit('${k}')">+ إضافة ${cfg.one}</button>
+     ${AI_EXTRACT.includes(k) ? `<div class="small mt">أو صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات ✨</div>` : ""}</div>`}`;
+}
+function recCard(k, r) {
+  const cfg = ENT[k];
+  const badges = [];
+  if (cfg.status && r[cfg.status]) badges.push(`<span class="badge ${cfg.statusColor?.[r[cfg.status]] || ""}">${esc(r[cfg.status])}</span>`);
+  if (k === "requests" && r.priority === "عاجل") badges.push(`<span class="badge b-red">عاجل</span>`);
+  for (const f of cfg.fields) {
+    if (f.t !== "date" || !r[f.k]) continue;
+    const d = daysLeft(r[f.k]);
+    let cls = "";
+    if (f.exp) cls = d < 0 ? "b-red" : d <= 30 ? "b-amber" : "";
+    if (f.hearing && r.status !== "مغلقة") cls = d >= 0 && d <= 14 ? "b-amber" : "";
+    if (f.due && r.status !== "مدفوعة") cls = d < 0 ? "b-red" : d <= 7 ? "b-amber" : "";
+    if (f.deadline && r.status !== "مكتمل") cls = d < 0 ? "b-red" : "";
+    if (f.exp || f.hearing || f.due || f.deadline) badges.push(`<span class="badge ${cls}">${f.l}: ${fmtDate(r[f.k])}${f.exp && d < 0 ? " (منتهي)" : ""}</span>`);
+  }
+  if (isAdmin()) badges.push(`<span class="badge">${esc(depName(r.department_id))}</span>`);
+  return `<div class="rec" onclick="App.edit('${k}','${r.id}')">
+    <div class="t">${esc(r[cfg.primary])}</div>
+    ${cfg.sub(r) ? `<div class="muted small">${esc(cfg.sub(r))}</div>` : ""}
+    ${k === "vehicles" && r.location ? `<div class="small">📍 ${esc(r.location)}</div>` : ""}
+    ${k === "legal_cases" && r.last_update ? `<div class="small" style="margin-top:4px">${esc(r.last_update.slice(0, 120))}</div>` : ""}
+    ${cfg.progress ? `<div class="bar"><i style="width:${r.progress || 0}%"></i></div><div class="muted small">${r.progress || 0}% · ${fmtSAR(r.contract_value)}</div>` : ""}
+    <div class="meta">${badges.join("")}</div></div>`;
+}
+
+// ===== Profile / settings =====
+function viewProfile() {
+  const p = S.me || {};
+  return `<div class="card" style="max-width:560px">
+    <div class="row mb">${avatar(p, "lg")}<div><b style="font-size:18px">${esc(p.full_name)}</b><div class="muted small">${esc(p.email)}</div>
+      <label class="btn sm mt">📷 تغيير الصورة<input type="file" accept="image/*" class="hidden" onchange="App.myPhoto(this)"></label></div></div>
+    <form onsubmit="App.saveProfile(event)">
+      <label class="f"><span>الاسم الكامل</span><input class="in" name="full_name" value="${esc(p.full_name)}" required></label>
+      <div class="two">
+        <label class="f"><span>المسمى الوظيفي</span><input class="in" name="job_title" value="${esc(p.job_title)}"></label>
+        <label class="f"><span>الجوال</span><input class="in" name="phone" value="${esc(p.phone)}" dir="ltr"></label>
+      </div>
+      <label class="f"><span>القسم</span><select class="in" name="department_id" ${isAdmin() || !p.department_id ? "" : "disabled"}>
+        <option value="">بدون قسم</option>${S.deps.map((d) => `<option value="${d.id}" ${d.id === p.department_id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select>
+        ${!isAdmin() && p.department_id ? `<span class="muted small">تغيير القسم يتم عن طريق المدير</span>` : ""}</label>
+      <button class="btn pri">حفظ</button>
+    </form></div>`;
+}
+function viewSettings() {
+  const s = S.settings;
+  return `<div class="grid g2">
+    <div class="card"><h3>🏷️ هوية المنصة</h3>
+      <p class="muted small mb">اسم المنصة يظهر لكل الموظفين بدل "يقين"، مثل: DLPS Platform</p>
+      <div class="row mb"><div class="logo" style="width:64px;height:64px">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
+        <label class="btn sm">رفع شعار الشركة<input type="file" accept="image/*" class="hidden" onchange="App.logo(this)"></label></div>
+      <form onsubmit="App.saveSettings(event)">
+        <label class="f"><span>اسم المنصة</span><input class="in" name="company_name" value="${esc(s.company_name)}" required></label>
+        <button class="btn pri">حفظ</button>
+      </form></div>
+    <div class="card"><h3>🏢 الأقسام</h3>
+      <table class="t">${S.deps.map((d) => `<tr><td style="width:36px">${esc(d.icon)}</td><td>${esc(d.name)}</td><td class="muted small">${S.people.filter((p) => p.department_id === d.id).length} موظف</td>
+        <td style="text-align:left"><button class="btn sm danger" onclick="App.delDept('${d.id}')">حذف</button></td></tr>`).join("")}</table>
+      <form class="row mt" onsubmit="App.addDept(event)">
+        <input class="in" name="icon" value="🏢" style="width:60px;text-align:center">
+        <input class="in sp" name="name" placeholder="اسم قسم جديد" required>
+        <button class="btn pri">إضافة</button>
+      </form></div>
+  </div>`;
+}
+
+// ===== Forms =====
+function modal(html) {
+  $("#modal-root").innerHTML = `<div class="modal" onclick="if(event.target===this)App.close()"><div class="sheet">${html}</div></div>`;
+}
+function fieldInput(f, v) {
+  const val = v ?? "";
+  if (f.t === "select") return `<select class="in" name="${f.k}">${f.o.map((o) => `<option ${o === val ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+  if (f.t === "textarea") return `<textarea class="in" name="${f.k}" placeholder="${esc(f.ph || "")}">${esc(val)}</textarea>`;
+  return `<input class="in" name="${f.k}" type="${f.t === "date" ? "date" : f.t === "number" ? "number" : "text"}" ${f.t === "number" ? 'step="any"' : ""} value="${esc(val)}" placeholder="${esc(f.ph || "")}" ${f.req ? "required" : ""}>`;
+}
+function entityForm(k, r = {}) {
+  const cfg = ENT[k], isNew = !r.id;
+  const defDep = r.department_id || (isAdmin() ? (cfg.def && depByName(cfg.def)) || S.me?.department_id : S.me?.department_id);
+  const wide = cfg.fields.filter((f) => f.wide), narrow = cfg.fields.filter((f) => !f.wide);
+  modal(`
+    <div class="row"><h3 class="sp">${isNew ? "إضافة " + cfg.one : "تعديل " + cfg.one}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    ${AI_EXTRACT.includes(k) ? `<label class="btn ai full mb" id="scanBtn">📷 صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات<input type="file" accept="image/*" capture="environment" class="hidden" onchange="App.scan('${k}', this)"></label>` : ""}
+    <form id="ef" onsubmit="App.save(event,'${k}','${r.id || ""}')">
+      ${wide.filter((f) => f.req).map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}
+      <div class="two">${narrow.map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}</div>
+      ${wide.filter((f) => !f.req).map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}
+      ${isAdmin() ? `<label class="f"><span>القسم المسؤول</span><select class="in" name="department_id">${S.deps.map((d) => `<option value="${d.id}" ${d.id === defDep ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>`
+        : `<input type="hidden" name="department_id" value="${esc(defDep || "")}">`}
+      <div class="row mt"><button class="btn pri">حفظ</button><span class="sp"></span>
+        ${!isNew && isAdmin() ? `<button type="button" class="btn danger" onclick="App.del('${k}','${r.id}')">حذف</button>` : ""}</div>
+      ${!isNew && r.updated_at ? `<div class="muted small mt">آخر تحديث: ${fmtDate(r.updated_at)}${r.created_by ? " · أضافه " + esc(S.people.find((p) => p.id === r.created_by)?.full_name || "") : ""}</div>` : ""}
+    </form>`);
+}
+
+// ===== Actions =====
+window.App = {
+  authTab(t) { S.authTab = t; renderAuth(); },
+  async retry() { await loadPublic(); renderAuth(); },
+  async login(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.auth.signInWithPassword({ email:f.get("email"), password:f.get("password") });
+    if (error) renderAuth({ t:"err", m:error.message.includes("Invalid") ? "البريد أو كلمة المرور غير صحيحة" : error.message.includes("confirm") ? "فعّل حسابك من الرابط اللي وصلك على البريد أولاً" : error.message });
+  },
+  async signup(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { data, error } = await sb.auth.signUp({ email:f.get("email"), password:f.get("password"),
+      options:{ emailRedirectTo:location.origin + location.pathname, data:{ full_name:f.get("full_name"), department_id:f.get("department_id"), job_title:f.get("job_title"), phone:f.get("phone") } } });
+    if (error) return renderAuth({ t:"err", m:error.message.includes("registered") ? "هذا البريد مسجل مسبقاً" : error.message });
+    if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب ✅ أرسلنا لك رابط تفعيل على بريدك، فعّله ثم سجّل دخولك." }); }
+  },
+  async logout() { await sb.auth.signOut(); },
+  menu(o) { $("#side")?.classList.toggle("open", o); $("#ov")?.classList.toggle("open", o); },
+  go(v, param = null) { S.view = v; S.param = param; renderShell(); window.scrollTo(0, 0); },
+  close() { $("#modal-root").innerHTML = ""; },
+  search(k, v) { S.q = { ...(S.q || {}), [k]:v }; renderView(); const i = document.querySelector(".toolbar .in"); i.focus(); i.setSelectionRange(v.length, v.length); },
+  filter(k, v) { S.f = { ...(S.f || {}), [k]:v }; renderView(); },
+  peopleSearch(v) { S.peopleQ = v; renderView(); const i = document.querySelector(".toolbar .in"); i.focus(); i.setSelectionRange(v.length, v.length); },
+
+  edit(k, id) { entityForm(k, id ? (S.data[k] ?? []).find((r) => r.id === id) : {}); },
+  async save(e, k, id) {
+    e.preventDefault();
+    const fd = new FormData(e.target), row = {};
+    for (const f of ENT[k].fields) { let v = fd.get(f.k); if (v === "" || v == null) v = null; else if (f.t === "number") v = Number(v); row[f.k] = v; }
+    if (k === "projects" && row.progress != null) row.progress = Math.max(0, Math.min(100, Math.round(row.progress)));
+    row.department_id = fd.get("department_id") || null;
+    row.updated_at = new Date().toISOString();
+    const q = id ? sb.from(k).update(row).eq("id", id) : sb.from(k).insert(row);
+    const { error } = await q;
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast("تم الحفظ ✅"); await loadAll(); renderShell();
+  },
+  async del(k, id) {
+    if (!confirm("متأكد من الحذف؟")) return;
+    const { error } = await sb.from(k).delete().eq("id", id);
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast("تم الحذف"); await loadAll(); renderShell();
+  },
+  async scan(k, input) {
+    const file = input.files[0]; if (!file) return;
+    const btn = $("#scanBtn"); const old = btn.innerHTML;
+    btn.innerHTML = `<span class="spin"></span> يقين يقرأ المستند...`;
+    try {
+      const blob = await resizeImage(file, 1600, 0.85);
+      const { fields } = await ai({ mode:"extract", target:k, image:await blobToB64(blob), media_type:"image/jpeg" });
+      let n = 0;
+      for (const [key, val] of Object.entries(fields || {})) {
+        const el = document.querySelector(`#ef [name="${key}"]`);
+        if (el && val !== null && val !== "") {
+          if (el.tagName === "SELECT") { if ([...el.options].some((o) => o.value === String(val))) { el.value = val; n++; } }
+          else { el.value = val; n++; }
+          el.style.borderColor = "var(--green)";
+        }
+      }
+      toast(n ? `✨ تم تعبئة ${n} حقول تلقائياً، راجعها ثم احفظ` : "ما قدرت أقرأ بيانات واضحة من الصورة");
+      btn.innerHTML = old;
+    } catch (err) { btn.innerHTML = old; toast(err.message); }
+  },
+
+  async brief() {
+    const b = $("#briefBtn"); if (b) { b.disabled = true; b.innerHTML = `<span class="spin"></span> يقين يحلل بيانات الشركة...`; }
+    try { const { brief } = await ai({ mode:"brief" }); S.brief = brief; }
+    catch (err) { S.brief = { error:err.message }; }
+    if (S.view === "home") renderView();
+  },
+  async ask(q, e) {
+    if (e) e.preventDefault();
+    const text = (q ?? $("#q")?.value ?? "").trim(); if (!text || S.chatBusy) return;
+    const history = [...S.chat];
+    S.chat.push({ role:"user", content:text }); S.chatBusy = true; renderView();
+    try { const { answer } = await ai({ mode:"chat", question:text, history }); S.chat.push({ role:"assistant", content:answer }); }
+    catch (err) { S.chat.push({ role:"assistant", content:"⚠️ " + err.message }); }
+    S.chatBusy = false; if (S.view === "ai") { renderView(); $("#q")?.focus(); }
+  },
+
+  noteForm(dep = "", subject = "", body = "") {
+    modal(`<div class="row"><h3 class="sp">📌 ملاحظة لقسم</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      <form onsubmit="App.saveNote(event)">
+        <label class="f"><span>القسم</span><select class="in" name="department_id" required>${S.deps.map((d) => `<option value="${d.id}" ${d.id === dep ? "selected" : ""}>${esc(d.icon)} ${esc(d.name)}</option>`).join("")}</select></label>
+        <label class="f"><span>الموضوع</span><input class="in" name="subject" value="${esc(subject)}"></label>
+        <label class="f"><span>الملاحظة</span><textarea class="in" name="body" required>${esc(body)}</textarea></label>
+        <label class="f"><span>المطلوب قبل (اختياري)</span><input class="in" type="date" name="due_date"></label>
+        <button class="btn pri">إرسال للقسم</button></form>`);
+  },
+  noteFromAI(dep, title, why) { App.noteForm(dep, title, why); },
+  async saveNote(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.from("manager_notes").insert({ department_id:f.get("department_id"), subject:f.get("subject") || null, body:f.get("body"), due_date:f.get("due_date") || null });
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast("تم إرسال الملاحظة ✅"); await loadAll(); renderShell();
+  },
+  replyForm(id) {
+    const n = S.data.manager_notes.find((x) => x.id === id);
+    modal(`<div class="row"><h3 class="sp">💬 الرد على الملاحظة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      <div class="risk mb">${esc(n.body)}</div>
+      <form onsubmit="App.saveReply(event,'${id}')">
+        <label class="f"><span>ردك</span><textarea class="in" name="reply" id="replyTxt" required>${esc(n.reply || "")}</textarea></label>
+        <div class="row"><button class="btn pri">إرسال الرد</button>
+          <button type="button" class="btn ai" id="draftBtn" onclick="App.draftReply('${id}')">✨ اقترح رد</button></div></form>`);
+  },
+  async draftReply(id) {
+    const n = S.data.manager_notes.find((x) => x.id === id), b = $("#draftBtn");
+    b.disabled = true; b.innerHTML = `<span class="spin"></span>`;
+    try { const { text } = await ai({ mode:"note_reply", note:(n.subject ? n.subject + ": " : "") + n.body }); $("#replyTxt").value = text; }
+    catch (err) { toast(err.message); }
+    b.disabled = false; b.innerHTML = "✨ اقترح رد";
+  },
+  async saveReply(e, id) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.from("manager_notes").update({ reply:f.get("reply"), status:"تم الرد" }).eq("id", id);
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast("تم إرسال الرد ✅"); await loadAll(); renderShell();
+  },
+  async noteStatus(id, status) { await sb.from("manager_notes").update({ status }).eq("id", id); await loadAll(); renderShell(); },
+  async delNote(id) { if (!confirm("حذف الملاحظة؟")) return; await sb.from("manager_notes").delete().eq("id", id); await loadAll(); renderShell(); },
+
+  personForm(id) {
+    const p = S.people.find((x) => x.id === id); if (!p) return;
+    modal(`<div class="row"><h3 class="sp">بيانات الموظف</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      <div class="row mb">${avatar(p, "lg")}<div><b>${esc(p.full_name)}</b><div class="muted small">${esc(p.email)}</div><div class="muted small">انضم ${fmtDate(p.created_at)}</div></div></div>
+      <form onsubmit="App.savePerson(event,'${id}')">
+        <label class="f"><span>الاسم</span><input class="in" name="full_name" value="${esc(p.full_name)}"></label>
+        <div class="two"><label class="f"><span>المسمى</span><input class="in" name="job_title" value="${esc(p.job_title)}"></label>
+        <label class="f"><span>الجوال</span><input class="in" name="phone" value="${esc(p.phone)}" dir="ltr"></label></div>
+        <div class="two"><label class="f"><span>القسم</span><select class="in" name="department_id"><option value="">بدون قسم</option>${S.deps.map((d) => `<option value="${d.id}" ${d.id === p.department_id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>
+        <label class="f"><span>الصلاحية</span><select class="in" name="role" ${p.id === S.me.id ? "disabled" : ""}><option value="employee" ${p.role === "employee" ? "selected" : ""}>موظف</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مدير (وصول كامل)</option></select></label></div>
+        <div class="row mt"><button class="btn pri">حفظ</button><span class="sp"></span>
+          ${p.id !== S.me.id ? `<button type="button" class="btn danger" onclick="App.delUser('${id}')">🗑 حذف المستخدم</button>` : ""}</div>
+      </form>`);
+  },
+  async savePerson(e, id) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const row = { full_name:f.get("full_name"), job_title:f.get("job_title") || null, phone:f.get("phone") || null, department_id:f.get("department_id") || null };
+    if (f.get("role")) row.role = f.get("role");
+    const { error } = await sb.from("profiles").update(row).eq("id", id);
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast("تم الحفظ ✅"); await loadAll(); renderShell();
+  },
+  async delUser(id) {
+    const p = S.people.find((x) => x.id === id);
+    if (!confirm(`حذف ${p?.full_name} نهائياً من المنصة؟ ما يقدر يدخل بعدها.`)) return;
+    const { error } = await sb.rpc("admin_delete_user", { target:id });
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast("تم حذف المستخدم"); await loadAll(); renderShell();
+  },
+
+  async myPhoto(input) {
+    const file = input.files[0]; if (!file) return;
+    try { toast("جاري الرفع..."); const url = await uploadImage(file, S.me.id);
+      await sb.from("profiles").update({ avatar_url:url }).eq("id", S.me.id); await loadAll(); renderShell(); toast("تم تحديث الصورة ✅"); }
+    catch (err) { toast("خطأ: " + err.message); }
+  },
+  async saveProfile(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const row = { full_name:f.get("full_name"), job_title:f.get("job_title") || null, phone:f.get("phone") || null };
+    if (f.has("department_id") && (isAdmin() || !S.me.department_id)) row.department_id = f.get("department_id") || null;
+    const { error } = await sb.from("profiles").update(row).eq("id", S.me.id);
+    if (error) return toast("خطأ: " + error.message);
+    toast("تم الحفظ ✅"); await loadAll(); renderShell();
+  },
+  async saveSettings(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.from("settings").update({ company_name:f.get("company_name"), updated_at:new Date().toISOString() }).eq("id", 1);
+    if (error) return toast("خطأ: " + error.message);
+    toast("تم الحفظ ✅"); await loadAll(); renderShell();
+  },
+  async logo(input) {
+    const file = input.files[0]; if (!file) return;
+    try { const url = await uploadImage(file, S.me.id + "/logo"); await sb.from("settings").update({ logo_url:url }).eq("id", 1); await loadAll(); renderShell(); toast("تم رفع الشعار ✅"); }
+    catch (err) { toast("خطأ: " + err.message); }
+  },
+  async addDept(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.from("departments").insert({ name:f.get("name"), icon:f.get("icon") || "🏢" });
+    if (error) return toast("خطأ: " + error.message);
+    await loadAll(); renderShell();
+  },
+  async delDept(id) {
+    if (!confirm("حذف القسم؟ الموظفين والسجلات فيه بتصير بدون قسم.")) return;
+    await sb.from("departments").delete().eq("id", id); await loadAll(); renderShell();
+  },
+};
+
+// ===== Boot =====
+async function boot(session) {
+  S.session = session;
+  if (!session) { await loadPublic(); return renderAuth(); }
+  $("#app").innerHTML = `<div class="auth"><span class="spin" style="width:32px;height:32px;color:var(--green)"></span></div>`;
+  await loadAll();
+  renderShell();
+}
+let started = false;
+sb.auth.onAuthStateChange((ev, session) => {
+  if (ev === "TOKEN_REFRESHED") { S.session = session; return; }
+  if (ev === "INITIAL_SESSION" || ev === "SIGNED_IN" || ev === "SIGNED_OUT") {
+    if (ev === "SIGNED_IN" && started && S.session?.user?.id === session?.user?.id) return;
+    started = true; setTimeout(() => boot(session), 0);
+  }
+});
+</script>
+</body>
+</html>
