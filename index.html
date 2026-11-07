@@ -362,8 +362,16 @@ function renderAuth(message) {
     ${S.authTab === "login" ? `
       <form onsubmit="App.login(event)">
         <label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
-        <label class="f"><span>كلمة المرور</span><input class="in" name="password" type="password" required dir="ltr"></label>
+        <label class="f"><span>كلمة المرور</span><input class="in pw" name="password" type="password" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
+        <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار كلمة المرور</label>
         <button class="btn pri full">دخول</button>
+        <button type="button" class="btn ghost full mt" onclick="App.forgot()">نسيت كلمة المرور؟</button>
+      </form>` : S.authTab === "reset" ? `
+      <form onsubmit="App.setNewPw(event)">
+        <p class="mb">اكتب كلمة المرور الجديدة</p>
+        <label class="f"><span>كلمة المرور الجديدة (6 أحرف أو أكثر)</span><input class="in pw" name="password" type="password" minlength="6" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
+        <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار كلمة المرور</label>
+        <button class="btn pri full">حفظ والدخول</button>
       </form>` : `
       <form onsubmit="App.signup(event)">
         <label class="f"><span>رمز الشركة (تاخذه من مدير شركتك)</span>
@@ -379,7 +387,8 @@ function renderAuth(message) {
         </div>
         <label class="f"><span>رقم الجوال</span><input class="in" name="phone" dir="ltr"></label>
         <label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
-        <label class="f"><span>كلمة المرور (6 أحرف أو أكثر)</span><input class="in" name="password" type="password" minlength="6" required dir="ltr"></label>
+        <label class="f"><span>كلمة المرور (6 أحرف أو أكثر)</span><input class="in pw" name="password" type="password" minlength="6" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
+        <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار كلمة المرور</label>
         <button class="btn pri full">إنشاء الحساب</button>
       </form>`}
     ${message ? `<div class="msg ${message.t}">${esc(message.m)}</div>` : ""}
@@ -392,7 +401,7 @@ function renderAuth(message) {
 // ===== Shell =====
 function navItems() {
   const top = isSuper() ? [{ sec:"مسؤول المنصة" }, { v:"platform", i:"🌐", l:"لوحة يقين (كل الشركات)" }] : [];
-  if (!S.cid) return top;
+  if (!S.cid) return [...top, { v:"profile", i:"👤", l:"ملفي الشخصي" }];
   const alerts = computeAlerts();
   const cnt = (v) => alerts.filter((a) => a.view === v).length;
   const openNotes = (S.data.manager_notes ?? []).filter((n) => n.status === "مفتوحة").length;
@@ -408,7 +417,7 @@ function navItems() {
     { sec:"العمليات" },
     ...Object.entries(ENT).map(([k, c]) => ({ v:k, i:c.icon, l:c.title, c:cnt(k) })),
     { sec:"الحساب" },
-    ...(isSuper() ? [] : [{ v:"profile", i:"👤", l:"ملفي الشخصي" }]),
+    { v:"profile", i:"👤", l:"ملفي الشخصي" },
     ...(isAdmin() ? [{ v:"settings", i:"⚙️", l:"إعدادات الشركة" }] : []),
   ];
 }
@@ -739,6 +748,12 @@ function viewProfile() {
         <option value="">بدون قسم</option>${S.deps.map((d) => `<option value="${d.id}" ${d.id === p.department_id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select>
         ${!isAdmin() && p.department_id ? `<span class="muted small">تغيير القسم يتم عن طريق المدير</span>` : ""}</label>
       <button class="btn pri">حفظ</button>
+    </form>
+    <form class="mt" onsubmit="App.changePw(event)" style="border-top:1px solid var(--line);padding-top:16px">
+      <b>🔒 تغيير كلمة المرور</b>
+      <label class="f mt"><span>كلمة المرور الجديدة</span><input class="in pw" name="password" type="password" minlength="6" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
+      <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار</label>
+      <button class="btn">تغيير</button>
     </form></div>`;
 }
 function viewSettings() {
@@ -845,9 +860,31 @@ window.App = {
     if (S.cid === id) { S.cid = null; try { localStorage.removeItem("yq_cid"); } catch {} }
     App.close(); S.view = "platform"; await reload();
   },
+  showPw(on) { document.querySelectorAll(".pw").forEach((i) => (i.type = on ? "text" : "password")); },
+  async forgot() {
+    const email = (document.querySelector('form input[name="email"]')?.value || "").trim().toLowerCase();
+    if (!email) return renderAuth({ t:"err", m:"اكتب بريدك الإلكتروني أولاً ثم اضغط نسيت كلمة المرور" });
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo:location.origin + location.pathname });
+    renderAuth(error ? { t:"err", m:error.message.includes("after") ? "انتظر دقيقة ثم حاول مرة ثانية" : error.message } : { t:"ok", m:"أرسلنا لك رابط على بريدك. افتحه من نفس الجهاز، وبيطلب منك كلمة مرور جديدة." });
+  },
+  async setNewPw(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const b = e.target.querySelector("button"); b.disabled = true;
+    const { error } = await sb.auth.updateUser({ password:f.get("password") });
+    if (error) { b.disabled = false; return renderAuth({ t:"err", m:error.message }); }
+    S.authTab = "login"; S.recovering = false; toast("تم تغيير كلمة المرور ✅"); boot((await sb.auth.getSession()).data.session);
+  },
+  async changePw(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.auth.updateUser({ password:f.get("password") });
+    if (error) return toast("خطأ: " + error.message);
+    e.target.reset(); toast("تم تغيير كلمة المرور ✅");
+  },
   async login(e) {
     e.preventDefault(); const f = new FormData(e.target);
-    const { error } = await sb.auth.signInWithPassword({ email:f.get("email"), password:f.get("password") });
+    const btn = e.target.querySelector(".btn.pri"); if (btn.disabled) return; btn.disabled = true; btn.innerHTML = `<span class="spin"></span>`;
+    const { error } = await sb.auth.signInWithPassword({ email:String(f.get("email")).trim().toLowerCase(), password:f.get("password") });
+    if (error) { btn.disabled = false; btn.textContent = "دخول"; }
     if (error) renderAuth({ t:"err", m:error.message.includes("Invalid") ? "البريد أو كلمة المرور غير صحيحة" : error.message.includes("confirm") ? "فعّل حسابك من الرابط اللي وصلك على البريد أولاً" : error.message });
   },
   async checkCode() {
@@ -859,7 +896,13 @@ window.App = {
     renderAuth(data ? null : { t:"err", m:"رمز الشركة غير صحيح" });
   },
   async signup(e) {
-    e.preventDefault(); const f = new FormData(e.target);
+    e.preventDefault();
+    if (S.signingUp) return; S.signingUp = true;
+    try { await App._signup(e); } finally { S.signingUp = false; }
+  },
+  async _signup(e) {
+    const f = new FormData(e.target);
+    const btn = e.target.querySelector(".btn.pri"); if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spin"></span>`; }
     const email = String(f.get("email")).trim().toLowerCase();
     const code = String(f.get("company_code") || "").trim().toUpperCase();
     if (email !== OWNER_EMAIL) {
@@ -868,7 +911,7 @@ window.App = {
     const { data, error } = await sb.auth.signUp({ email, password:f.get("password"),
       options:{ emailRedirectTo:location.origin + location.pathname, data:{ full_name:f.get("full_name"), company_code:code, department_id:f.get("department_id"), job_title:f.get("job_title"), phone:f.get("phone") } } });
     if (error) return renderAuth({ t:"err", m:error.message.includes("registered") ? "هذا البريد مسجل مسبقاً" : error.message.includes("Database error") ? "رمز الشركة غير صحيح" : error.message });
-    if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب ✅ أرسلنا لك رابط تفعيل على بريدك، فعّله ثم سجّل دخولك." }); }
+    if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب ✅ افتح رابط التفعيل اللي وصلك على بريدك. لو فتح لك صفحة خطأ عادي، التفعيل تم. ارجع هنا وسجّل دخولك." }); }
   },
   async logout() { try { localStorage.removeItem("yq_cid"); } catch {} S.cid = null; S.company = null; S.brief = null; S.chat = []; S.view = "home"; await sb.auth.signOut(); },
   menu(o) { $("#side")?.classList.toggle("open", o); $("#ov")?.classList.toggle("open", o); },
@@ -1068,6 +1111,10 @@ function blocked(m) {
 let started = false;
 sb.auth.onAuthStateChange((ev, session) => {
   if (ev === "TOKEN_REFRESHED") { S.session = session; return; }
+  if (ev === "PASSWORD_RECOVERY" || (ev === "INITIAL_SESSION" && /type=recovery/.test(location.hash))) {
+    S.recovering = true; S.session = session; S.authTab = "reset"; started = true; setTimeout(() => renderAuth(), 0); return;
+  }
+  if (S.recovering && ev === "SIGNED_IN") return;
   if (ev === "INITIAL_SESSION" || ev === "SIGNED_IN" || ev === "SIGNED_OUT") {
     if (ev === "SIGNED_IN" && started && S.session?.user?.id === session?.user?.id) return;
     started = true; setTimeout(() => boot(session), 0);
