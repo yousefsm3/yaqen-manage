@@ -182,7 +182,7 @@ const daysLeft = (d) => (d ? Math.round((new Date(d) - today()) / 86400000) : nu
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-SA-u-ca-gregory", { year:"numeric", month:"short", day:"numeric" }) : "-");
 const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("");
 
-const OWNER_EMAIL = "yousef@yaqenai.com";
+const OWNER_EMAIL = "yyssmmrr2@gmail.com";
 const S = { session:null, me:null, company:null, cid:null, companies:[], allPeople:[], settings:{ company_name:"يقين للأعمال" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login", signupCo:null };
 const isSuper = () => S.me?.role === "super_admin";
 const isAdmin = () => S.me?.role === "admin" || isSuper();
