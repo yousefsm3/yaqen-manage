@@ -156,6 +156,37 @@ textarea.in{min-height:90px;resize:vertical}
 .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 18px;border-radius:12px;z-index:80;font-size:14px}
 .spin{width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
+/* cropper */
+.crop-wrap{position:relative;width:min(300px,100%);aspect-ratio:1;margin:0 auto;touch-action:none;border-radius:14px;overflow:hidden;background:#000}
+.crop-wrap canvas{width:100%;height:100%;display:block;cursor:grab}
+.crop-ring{position:absolute;inset:0;pointer-events:none;border-radius:50%;box-shadow:0 0 0 999px rgba(0,0,0,.55);outline:2px solid rgba(255,255,255,.8);outline-offset:-2px}
+input[type=range]{width:100%;accent-color:var(--green)}
+/* rooms */
+.room-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.avs{display:flex}
+.avs .av{width:28px;height:28px;font-size:11px;border:2px solid var(--panel);margin-left:-8px}
+.m{display:flex;gap:8px;align-items:flex-end;max-width:88%}
+.m.me{align-self:flex-start;flex-direction:row}
+.m.other{align-self:flex-end;flex-direction:row-reverse}
+.m .av{width:30px;height:30px;font-size:12px}
+.m .b{padding:9px 12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);white-space:pre-wrap;word-wrap:break-word;min-width:60px}
+.m.me .b{background:#123524;border-color:#1E5A3A}
+.m .who{font-size:12px;color:var(--green);font-weight:600;margin-bottom:2px}
+.m .tm{font-size:11px;color:var(--muted);margin-top:4px}
+.m img.pic{max-width:240px;max-height:260px;border-radius:10px;display:block;cursor:pointer}
+.m audio{width:230px;max-width:100%;height:40px}
+.fileln{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.fileln .ic{width:40px;height:40px;border-radius:10px;background:var(--panel2);display:grid;place-items:center;font-size:20px}
+.m.ai{align-self:center;max-width:95%}
+.m.ai .b{background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(14,165,233,.10));border-color:rgba(34,197,94,.35)}
+.rec-bar{display:flex;align-items:center;gap:10px;background:var(--redSoft);color:#FCA5A5;border-radius:12px;padding:8px 12px;flex:1}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:bl 1s infinite}
+.iconbtn{border:0;background:var(--panel2);width:42px;height:42px;border-radius:12px;font-size:18px;cursor:pointer;flex-shrink:0;display:grid;place-items:center}
+.pick{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;cursor:pointer}
+.pick:hover{background:var(--panel2)}
+.pick input{width:18px;height:18px;accent-color:var(--green)}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:90;display:grid;place-items:center;padding:16px}
+.lightbox img{max-width:100%;max-height:100%;border-radius:8px}
 table.t{width:100%;border-collapse:collapse;font-size:14px}
 table.t td,table.t th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right}
 table.t th{color:var(--muted);font-weight:500;font-size:13px}
@@ -183,7 +214,7 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-SA-u-ca-gregory",
 const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("");
 
 const OWNER_EMAIL = "yyssmmrr2@gmail.com";
-const S = { session:null, me:null, company:null, cid:null, companies:[], allPeople:[], settings:{ company_name:"يقين للأعمال" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login", signupCo:null };
+const S = { session:null, me:null, company:null, cid:null, companies:[], allPeople:[], settings:{ company_name:"يقين للأعمال" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login", signupCo:null, urls:{}, rooms:[], roomMembers:[] };
 const isSuper = () => S.me?.role === "super_admin";
 const isAdmin = () => S.me?.role === "admin" || isSuper();
 const depName = (id) => S.deps.find((d) => d.id === id)?.name ?? "بدون قسم";
@@ -260,6 +291,13 @@ async function loadCompanies() {
 }
 async function loadAll() {
   const cid = S.cid;
+  const [rooms, members] = await Promise.all([
+    sb.from("rooms").select("*").eq("company_id", cid).order("last_message_at", { ascending:false }),
+    sb.from("room_members").select("*"),
+  ]);
+  S.rooms = rooms.data ?? [];
+  const rids = new Set(S.rooms.map((r) => r.id));
+  S.roomMembers = (members.data ?? []).filter((m) => rids.has(m.room_id));
   const [co, dp, pp, notes, ...rest] = await Promise.all([
     sb.from("companies").select("*").eq("id", cid).single(),
     sb.from("departments").select("*").eq("company_id", cid).order("created_at"),
@@ -410,6 +448,7 @@ function navItems() {
     { sec:isSuper() ? "الشركة: " + (S.company?.name || "") : "عام" },
     { v:"home", i:"🏠", l:"لوحة القيادة" },
     { v:"ai", i:"✨", l:"مساعد يقين الذكي" },
+    { v:"rooms", i:"🗣️", l:"غرف العمليات", c:(S.rooms ?? []).filter((r) => r.status === "مفتوحة").length || 0 },
     { v:"notes", i:"📌", l:"ملاحظات المدير", c:openNotes },
     { sec:"الشركة" },
     { v:"departments", i:"🏢", l:isAdmin() ? "الأقسام" : "قسمي" },
@@ -422,7 +461,7 @@ function navItems() {
   ];
 }
 function titleOf(v) {
-  return ({ platform:"لوحة يقين", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
+  return ({ platform:"لوحة يقين", rooms:"غرف العمليات", room:(S.rooms ?? []).find((r) => r.id === S.param)?.title ?? "غرفة عمليات", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
 }
 function renderShell() {
   const s = S.settings, me = S.me;
@@ -453,7 +492,7 @@ function renderShell() {
       <div class="content" id="content"></div>
     </main>
   </div>
-  ${S.view !== "ai" && S.cid && S.view !== "platform" ? `<button class="fab" title="اسأل مساعد يقين" onclick="App.go('ai')">✨</button>` : ""}`;
+  ${S.view !== "ai" && S.cid && S.view !== "platform" && S.view !== "room" ? `<button class="fab" title="اسأل مساعد يقين" onclick="App.go('ai')">✨</button>` : ""}`;
   renderView();
 }
 function avatar(p, cls = "") {
@@ -463,7 +502,9 @@ function avatar(p, cls = "") {
 function renderView() {
   const c = $("#content");
   const v = S.view;
-  if (v === "platform") c.innerHTML = viewPlatform();
+  if (v === "rooms") c.innerHTML = viewRooms();
+  else if (v === "room") { c.innerHTML = viewRoom(S.param); Room.open(S.param); }
+  else if (v === "platform") c.innerHTML = viewPlatform();
   else if (v === "home") c.innerHTML = viewHome();
   else if (v === "ai") c.innerHTML = viewAI();
   else if (v === "notes") c.innerHTML = viewNotes();
@@ -475,6 +516,210 @@ function renderView() {
   else if (ENT[v]) c.innerHTML = viewEntity(v);
   if (v === "ai") { const m = $("#msgs"); if (m) m.scrollTop = m.scrollHeight; }
 }
+
+// ===== Photo cropper =====
+function openCropper(file, onDone) {
+  const url = URL.createObjectURL(file);
+  modal(`<div class="row"><h3 class="sp">✂️ قص الصورة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    <div class="crop-wrap" id="cropWrap"><canvas id="cropCv" width="600" height="600"></canvas><div class="crop-ring"></div></div>
+    <label class="f mt"><span>تكبير وتصغير</span><input type="range" id="cropZoom" dir="ltr" min="1" max="4" step="0.01" value="1"></label>
+    <p class="muted small">اسحب الصورة بإصبعك عشان تحركها داخل الدائرة</p>
+    <div class="row mt"><button class="btn pri" id="cropOk">حفظ الصورة</button><button class="btn ghost" onclick="App.close()">إلغاء</button></div>`);
+  const cv = $("#cropCv"), ctx = cv.getContext("2d"), N = 600;
+  const img = new Image();
+  let base = 1, zoom = 1, ox = 0, oy = 0, drag = null;
+  const w = () => img.width * base * zoom, h = () => img.height * base * zoom;
+  const clamp = () => { ox = Math.min(0, Math.max(N - w(), ox)); oy = Math.min(0, Math.max(N - h(), oy)); };
+  const draw = () => { clamp(); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, N, N); ctx.drawImage(img, ox, oy, w(), h()); };
+  img.onload = () => { base = Math.max(N / img.width, N / img.height); ox = (N - w()) / 2; oy = (N - h()) / 2; draw(); };
+  img.src = url;
+  const ratio = () => N / cv.clientWidth;
+  cv.addEventListener("pointerdown", (e) => { drag = { x:e.clientX, y:e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", (e) => { if (!drag) return; ox += (e.clientX - drag.x) * ratio(); oy += (e.clientY - drag.y) * ratio(); drag = { x:e.clientX, y:e.clientY }; draw(); });
+  cv.addEventListener("pointerup", () => (drag = null));
+  cv.addEventListener("pointercancel", () => (drag = null));
+  $("#cropZoom").addEventListener("input", (e) => {
+    const nz = Number(e.target.value);
+    const cx = (N / 2 - ox) / (base * zoom), cy = (N / 2 - oy) / (base * zoom);
+    zoom = nz; ox = N / 2 - cx * base * zoom; oy = N / 2 - cy * base * zoom; draw();
+  });
+  $("#cropOk").addEventListener("click", () => {
+    const out = document.createElement("canvas"); out.width = 400; out.height = 400;
+    out.getContext("2d").drawImage(cv, 0, 0, N, N, 0, 0, 400, 400);
+    $("#cropOk").disabled = true; $("#cropOk").innerHTML = `<span class="spin"></span>`;
+    out.toBlob((b) => { URL.revokeObjectURL(url); onDone(b); }, "image/jpeg", 0.9);
+  });
+}
+async function uploadBlob(blob, folder) {
+  const path = `${folder}/${Date.now()}.jpg`;
+  const { error } = await sb.storage.from("avatars").upload(path, blob, { contentType:"image/jpeg", upsert:true });
+  if (error) throw error;
+  return sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+}
+
+// ===== Operation rooms =====
+const fmtTime = (d) => new Date(d).toLocaleString("ar-SA-u-ca-gregory", { hour:"numeric", minute:"2-digit", day:"numeric", month:"short" });
+const fmtSize = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + " م.ب" : Math.max(1, Math.round(n / 1024)) + " ك.ب");
+const personById = (id) => S.people.find((p) => p.id === id) || (S.me?.id === id ? S.me : null);
+const roomMembers = (rid) => (S.roomMembers ?? []).filter((m) => m.room_id === rid).map((m) => personById(m.user_id)).filter(Boolean);
+const canAdminRoom = (r) => isAdmin() || r?.created_by === S.me?.id;
+
+function viewRooms() {
+  const rooms = S.rooms ?? [];
+  return `
+  <div class="toolbar"><div class="sp muted small" style="align-self:center">غرف نقاش لموضوع محدد: محادثة، رسائل صوتية، صور ومستندات، مع تلخيص ذكي للقرارات.</div>
+    <button class="btn pri" onclick="App.roomForm()">+ غرفة عمليات جديدة</button></div>
+  ${rooms.length ? `<div class="grid g3">${rooms.map((r) => { const mem = roomMembers(r.id); return `
+    <div class="rec" onclick="App.go('room','${r.id}')">
+      <div class="row"><div class="t sp">🗣️ ${esc(r.title)}</div><span class="badge ${r.status === "مفتوحة" ? "b-green" : ""}">${esc(r.status)}</span></div>
+      ${r.description ? `<div class="muted small" style="margin-top:4px">${esc(r.description.slice(0, 110))}</div>` : ""}
+      <div class="row mt"><div class="avs">${mem.slice(0, 6).map((p) => avatar(p)).join("")}</div><span class="muted small">${mem.length} عضو</span><span class="sp"></span><span class="muted small">${fmtTime(r.last_message_at)}</span></div>
+    </div>`; }).join("")}</div>` :
+  `<div class="card empty"><div style="font-size:40px">🗣️</div>ما فيه غرف عمليات للحين.<br>سوّ غرفة لموضوع معين، مثل "تعطل معدة في موقع أبقيق"، وأضف الموظفين المعنيين.
+    <br><button class="btn pri mt" onclick="App.roomForm()">+ غرفة عمليات جديدة</button></div>`}`;
+}
+
+function viewRoom(id) {
+  const r = (S.rooms ?? []).find((x) => x.id === id);
+  if (!r) return `<div class="card empty">الغرفة غير موجودة أو ما عندك صلاحية عليها.<br><button class="btn mt" onclick="App.go('rooms')">رجوع</button></div>`;
+  const mem = roomMembers(id), open = r.status === "مفتوحة";
+  return `<div class="chat">
+    <div class="room-head">
+      <button class="btn sm ghost" onclick="App.go('rooms')">→</button>
+      <div class="sp" style="min-width:140px"><b>🗣️ ${esc(r.title)}</b>${r.description ? `<div class="muted small">${esc(r.description)}</div>` : ""}</div>
+      <div class="avs" style="cursor:pointer" onclick="App.roomForm('${id}')">${mem.slice(0, 5).map((p) => avatar(p)).join("")}</div>
+      <button class="btn sm ai" id="sumBtn" onclick="App.roomSummary('${id}')">✨ لخّص النقاش</button>
+      ${canAdminRoom(r) ? `<button class="btn sm ghost" onclick="App.roomForm('${id}')">⚙️</button>` : ""}
+    </div>
+    <div class="msgs" id="msgs"><div class="empty"><span class="spin"></span></div></div>
+    ${open ? `<div class="composer" id="composer">
+      <label class="iconbtn" title="إرفاق صورة أو مستند">📎<input type="file" class="hidden" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.dwg" onchange="Room.files(this)"></label>
+      <button class="iconbtn" id="micBtn" title="رسالة صوتية" onclick="Room.record()">🎤</button>
+      <form class="row sp" style="flex-wrap:nowrap" onsubmit="Room.send(event)">
+        <input class="in" id="rmInput" placeholder="اكتب رسالة..." autocomplete="off">
+        <button class="btn pri">إرسال</button>
+      </form>
+    </div>` : `<div class="msg mt" style="text-align:center">🔒 هذه الغرفة مغلقة${canAdminRoom(r) ? ` · <a href="#" onclick="App.roomStatus('${id}','مفتوحة');return false">إعادة فتحها</a>` : ""}</div>`}
+  </div>`;
+}
+
+function msgHtml(m) {
+  const mine = m.user_id === S.me?.id, p = personById(m.user_id);
+  const url = m.file_path ? S.urls[m.file_path] : null;
+  let inner;
+  if (m.kind === "text") inner = esc(m.body);
+  else if (m.kind === "ai") inner = `<div class="muted small mb">✨ ملخص يقين الذكي</div>${md(m.body || "")}`;
+  else if (m.kind === "image") inner = url ? `<img class="pic" src="${esc(url)}" onclick="Room.zoom('${esc(url)}')">` : `<span class="spin"></span> صورة`;
+  else if (m.kind === "audio") inner = url ? `<audio controls preload="metadata" src="${esc(url)}"></audio>` : `<span class="spin"></span> رسالة صوتية`;
+  else inner = `<a class="fileln" href="${esc(url || "#")}" target="_blank" rel="noopener"><span class="ic">📄</span><span><b>${esc(m.file_name)}</b><div class="muted small">${m.file_size ? fmtSize(m.file_size) : ""} · اضغط للفتح</div></span></a>`;
+  if (m.kind === "ai") return `<div class="m ai"><div><div class="b">${inner}</div><div class="tm">${fmtTime(m.created_at)} · نشره ${esc(p?.full_name || "")}</div></div></div>`;
+  return `<div class="m ${mine ? "me" : "other"}">${mine ? "" : avatar(p)}<div><div class="b">${mine ? "" : `<div class="who">${esc(p?.full_name || "مستخدم")}</div>`}${inner}</div><div class="tm">${fmtTime(m.created_at)}</div></div></div>`;
+}
+
+const Room = {
+  id:null, ch:null, rec:null,
+  async open(id) {
+    if (this.id === id && S.roomMsgs?.[id]) { this.render(); return; }
+    this.leave(); this.id = id;
+    S.roomMsgs = S.roomMsgs || {};
+    const { data } = await sb.from("room_messages").select("*").eq("room_id", id).order("created_at").limit(500);
+    S.roomMsgs[id] = data ?? [];
+    this.render();
+    this.ch = sb.channel("room-" + id)
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"room_messages", filter:`room_id=eq.${id}` }, (p) => this.add(p.new))
+      .on("postgres_changes", { event:"DELETE", schema:"public", table:"room_messages" }, (p) => { S.roomMsgs[id] = (S.roomMsgs[id] || []).filter((m) => m.id !== p.old.id); this.render(); })
+      .subscribe();
+  },
+  leave() { if (this.ch) { sb.removeChannel(this.ch); this.ch = null; } this.id = null; this.stopRec(true); },
+  add(m) {
+    const list = S.roomMsgs[m.room_id] = S.roomMsgs[m.room_id] || [];
+    if (list.some((x) => x.id === m.id)) return;
+    list.push(m); if (this.id === m.room_id) this.render();
+  },
+  async render() {
+    const box = $("#msgs"); if (!box || !this.id) return;
+    const list = S.roomMsgs[this.id] || [];
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    box.innerHTML = list.length ? list.map(msgHtml).join("") : `<div class="empty">ابدأ النقاش 👋<br><span class="small">تقدر ترسل نص، صور، مستندات، أو رسالة صوتية 🎤</span></div>`;
+    if (atBottom || !box.dataset.init) { box.scrollTop = box.scrollHeight; box.dataset.init = "1"; }
+    const need = list.filter((m) => m.file_path && !S.urls[m.file_path]).map((m) => m.file_path);
+    if (need.length) {
+      const { data } = await sb.storage.from("rooms").createSignedUrls(need, 60 * 60 * 6);
+      (data ?? []).forEach((d) => { if (d.signedUrl) S.urls[d.path] = d.signedUrl; });
+      if ((data ?? []).some((d) => d.signedUrl)) this.render();
+    }
+  },
+  async post(row) {
+    const { data, error } = await sb.from("room_messages").insert({ room_id:this.id, ...row }).select().single();
+    if (error) { toast("خطأ: " + error.message); return; }
+    this.add(data);
+  },
+  async send(e) {
+    e.preventDefault(); const i = $("#rmInput"); const t = i.value.trim(); if (!t) return;
+    i.value = ""; await this.post({ kind:"text", body:t }); i.focus();
+  },
+  async upload(blob, name, mime) {
+    if (blob.size > 50 * 1048576) { toast("الملف أكبر من ٥٠ ميجا"); return null; }
+    const safe = name.replace(/[^\w.\-]+/g, "_").slice(-60) || "file";
+    const path = `${this.id}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${safe}`;
+    const { error } = await sb.storage.from("rooms").upload(path, blob, { contentType:mime || "application/octet-stream" });
+    if (error) { toast("خطأ في الرفع: " + error.message); return null; }
+    return path;
+  },
+  async files(input) {
+    const files = [...input.files]; input.value = "";
+    for (const f of files) {
+      toast(`جاري رفع ${f.name}...`);
+      const isImg = f.type.startsWith("image/") && !/svg/.test(f.type);
+      const blob = isImg ? await resizeImage(f, 1800, 0.85).catch(() => f) : f;
+      const path = await this.upload(blob, isImg ? f.name.replace(/\.\w+$/, "") + ".jpg" : f.name, isImg ? "image/jpeg" : f.type);
+      if (path) await this.post({ kind:isImg ? "image" : "file", file_path:path, file_name:f.name, file_size:blob.size, mime:isImg ? "image/jpeg" : f.type });
+    }
+  },
+  async record() {
+    if (this.rec) return this.stopRec(false);
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return toast("جهازك ما يدعم التسجيل الصوتي من المتصفح");
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+    catch { return toast("اسمح للمتصفح باستخدام المايكروفون"); }
+    const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/aac"].find((t) => MediaRecorder.isTypeSupported?.(t)) || "";
+    const mr = new MediaRecorder(stream, type ? { mimeType:type } : undefined);
+    const chunks = []; const started = Date.now();
+    mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    this.rec = { mr, stream, chunks, started, cancel:false };
+    mr.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const r = this.rec; this.rec = null; clearInterval(this.timer); this.recUI(false);
+      if (r.cancel || !chunks.length) return;
+      const mime = mr.mimeType || type || "audio/mp4";
+      const blob = new Blob(chunks, { type:mime });
+      const ext = /webm/.test(mime) ? "webm" : "m4a";
+      const secs = Math.round((Date.now() - started) / 1000);
+      const path = await this.upload(blob, `voice.${ext}`, mime);
+      if (path) await this.post({ kind:"audio", file_path:path, file_name:`رسالة صوتية (${secs} ث)`, file_size:blob.size, mime });
+    };
+    mr.start(); this.recUI(true);
+    this.timer = setInterval(() => { const s = Math.round((Date.now() - started) / 1000); const el = $("#recT"); if (el) el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }, 500);
+  },
+  stopRec(cancel) { if (this.rec) { this.rec.cancel = cancel; try { this.rec.mr.stop(); } catch {} } },
+  recUI(on) {
+    const c = $("#composer"); if (!c) return;
+    const form = c.querySelector("form"), mic = $("#micBtn");
+    let bar = $("#recBar");
+    if (on) {
+      form.classList.add("hidden");
+      if (!bar) { bar = document.createElement("div"); bar.id = "recBar"; bar.className = "rec-bar";
+        bar.innerHTML = `<span class="rec-dot"></span><span>جاري التسجيل <b id="recT">0:00</b></span><span class="sp"></span><button class="btn sm ghost" onclick="Room.stopRec(true)">إلغاء</button>`;
+        c.appendChild(bar); }
+      mic.textContent = "📤"; mic.title = "إرسال التسجيل";
+    } else { form?.classList.remove("hidden"); bar?.remove(); if (mic) { mic.textContent = "🎤"; mic.title = "رسالة صوتية"; } }
+  },
+  zoom(url) {
+    const d = document.createElement("div"); d.className = "lightbox"; d.innerHTML = `<img src="${esc(url)}">`;
+    d.onclick = () => d.remove(); document.body.appendChild(d);
+  },
+};
+window.Room = Room;
 
 // ===== Platform (owner) =====
 function viewPlatform() {
@@ -915,7 +1160,7 @@ window.App = {
   },
   async logout() { try { localStorage.removeItem("yq_cid"); } catch {} S.cid = null; S.company = null; S.brief = null; S.chat = []; S.view = "home"; await sb.auth.signOut(); },
   menu(o) { $("#side")?.classList.toggle("open", o); $("#ov")?.classList.toggle("open", o); },
-  go(v, param = null) { S.view = v; S.param = param; renderShell(); window.scrollTo(0, 0); },
+  go(v, param = null) { if (v !== "room" || param !== Room.id) Room.leave(); S.view = v; S.param = param; renderShell(); window.scrollTo(0, 0); },
   close() { $("#modal-root").innerHTML = ""; },
   search(k, v) { S.q = { ...(S.q || {}), [k]:v }; renderView(); const i = document.querySelector(".toolbar .in"); i.focus(); i.setSelectionRange(v.length, v.length); },
   filter(k, v) { S.f = { ...(S.f || {}), [k]:v }; renderView(); },
@@ -1048,12 +1293,91 @@ window.App = {
     App.close(); toast("تم حذف المستخدم"); await reload();
   },
 
-  async myPhoto(input) {
-    const file = input.files[0]; if (!file) return;
-    try { toast("جاري الرفع..."); const url = await uploadImage(file, S.me.id);
-      await sb.from("profiles").update({ avatar_url:url }).eq("id", S.me.id); await reload(); toast("تم تحديث الصورة ✅"); }
-    catch (err) { toast("خطأ: " + err.message); }
+  myPhoto(input) {
+    const file = input.files[0]; input.value = ""; if (!file) return;
+    openCropper(file, async (blob) => {
+      try { const url = await uploadBlob(blob, S.me.id);
+        await sb.from("profiles").update({ avatar_url:url }).eq("id", S.me.id);
+        S.me.avatar_url = url; App.close(); await reload(); toast("تم تحديث الصورة ✅"); }
+      catch (err) { App.close(); toast("خطأ: " + err.message); }
+    });
   },
+
+  // ----- operation rooms -----
+  roomForm(id) {
+    const r = id ? S.rooms.find((x) => x.id === id) : {};
+    const can = !id || canAdminRoom(r);
+    const memIds = new Set(id ? S.roomMembers.filter((m) => m.room_id === id).map((m) => m.user_id) : []);
+    const people = S.people.filter((p) => p.id !== S.me?.id);
+    if (id && !can) {
+      return modal(`<div class="row"><h3 class="sp">أعضاء الغرفة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+        <div class="list">${roomMembers(id).map(personRow).join("")}</div>
+        <button class="btn danger mt" onclick="App.leaveRoom('${id}')">مغادرة الغرفة</button>`);
+    }
+    modal(`<div class="row"><h3 class="sp">${id ? "إدارة الغرفة" : "🗣️ غرفة عمليات جديدة"}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      <form onsubmit="App.saveRoom(event,'${id || ""}')">
+        <label class="f"><span>موضوع الغرفة</span><input class="in" name="title" value="${esc(r.title || "")}" placeholder="مثال: تعطل الرافعة في موقع أبقيق" required></label>
+        <label class="f"><span>وصف مختصر (اختياري)</span><textarea class="in" name="description" style="min-height:60px">${esc(r.description || "")}</textarea></label>
+        <div class="f"><span class="muted small">الأعضاء (${people.length ? "اختر الموظفين المعنيين" : "ما فيه موظفين آخرين في الشركة للحين"})</span>
+          <input class="in mt" placeholder="بحث..." oninput="document.querySelectorAll('#pickList .pick').forEach(l=>l.style.display=l.textContent.includes(this.value)?'':'none')">
+          <div id="pickList" style="max-height:260px;overflow-y:auto;margin-top:6px">${people.map((p) => `
+            <label class="pick"><input type="checkbox" name="m" value="${p.id}" ${memIds.has(p.id) ? "checked" : ""}>${avatar(p)}<div><b>${esc(p.full_name)}</b><div class="muted small">${esc(depName(p.department_id))}${p.job_title ? " · " + esc(p.job_title) : ""}</div></div></label>`).join("")}</div></div>
+        <div class="row mt"><button class="btn pri">${id ? "حفظ" : "إنشاء الغرفة"}</button><span class="sp"></span>
+          ${id ? `<button type="button" class="btn ghost" onclick="App.roomStatus('${id}','${r.status === "مفتوحة" ? "مغلقة" : "مفتوحة"}')">${r.status === "مفتوحة" ? "🔒 إغلاق الغرفة" : "🔓 فتح الغرفة"}</button>
+            <button type="button" class="btn danger" onclick="App.delRoom('${id}')">حذف</button>` : ""}</div>
+      </form>`);
+  },
+  async saveRoom(e, id) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const btn = e.target.querySelector(".btn.pri"); btn.disabled = true;
+    const chosen = f.getAll("m");
+    const row = { title:f.get("title"), description:f.get("description") || null };
+    let rid = id;
+    if (id) {
+      const { error } = await sb.from("rooms").update(row).eq("id", id);
+      if (error) { btn.disabled = false; return toast("خطأ: " + error.message); }
+      const cur = S.roomMembers.filter((m) => m.room_id === id).map((m) => m.user_id).filter((u) => u !== S.me.id);
+      const add = chosen.filter((u) => !cur.includes(u)), rem = cur.filter((u) => !chosen.includes(u));
+      if (add.length) await sb.from("room_members").insert(add.map((u) => ({ room_id:id, user_id:u })));
+      if (rem.length) await sb.from("room_members").delete().eq("room_id", id).in("user_id", rem);
+    } else {
+      const { data, error } = await sb.from("rooms").insert({ ...row, company_id:S.cid }).select().single();
+      if (error) { btn.disabled = false; return toast("خطأ: " + error.message); }
+      rid = data.id;
+      if (chosen.length) { const r2 = await sb.from("room_members").insert(chosen.map((u) => ({ room_id:rid, user_id:u }))); if (r2.error) toast("خطأ: " + r2.error.message); }
+    }
+    App.close(); await loadAll(); App.go("room", rid); toast(id ? "تم الحفظ ✅" : "تم إنشاء الغرفة ✅");
+  },
+  async roomStatus(id, status) {
+    const { error } = await sb.from("rooms").update({ status }).eq("id", id);
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); await loadAll(); renderShell();
+  },
+  async delRoom(id) {
+    if (!confirm("حذف الغرفة وكل رسائلها نهائياً؟")) return;
+    const msgs = (S.roomMsgs?.[id] ?? []).filter((m) => m.file_path).map((m) => m.file_path);
+    if (msgs.length) await sb.storage.from("rooms").remove(msgs);
+    const { error } = await sb.from("rooms").delete().eq("id", id);
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); await loadAll(); App.go("rooms");
+  },
+  async leaveRoom(id) {
+    if (!confirm("تبي تغادر الغرفة؟")) return;
+    await sb.from("room_members").delete().eq("room_id", id).eq("user_id", S.me.id);
+    App.close(); await loadAll(); App.go("rooms");
+  },
+  async roomSummary(id) {
+    const b = $("#sumBtn"); if (b) { b.disabled = true; b.innerHTML = `<span class="spin"></span> يلخّص...`; }
+    try {
+      const { text } = await ai({ mode:"room_summary", room_id:id });
+      S.lastSummary = text;
+      modal(`<div class="row"><h3 class="sp">✨ ملخص النقاش</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+        <div style="white-space:pre-wrap;line-height:1.9">${md(text)}</div>
+        <div class="row mt"><button class="btn pri" onclick="App.postSummary()">📌 انشر الملخص في الغرفة</button><button class="btn ghost" onclick="App.close()">إغلاق</button></div>`);
+    } catch (err) { toast(err.message); }
+    if (b) { b.disabled = false; b.innerHTML = "✨ لخّص النقاش"; }
+  },
+  async postSummary() { App.close(); await Room.post({ kind:"ai", body:S.lastSummary }); },
   async saveProfile(e) {
     e.preventDefault(); const f = new FormData(e.target);
     const row = { full_name:f.get("full_name"), job_title:f.get("job_title") || null, phone:f.get("phone") || null };

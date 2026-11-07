@@ -94,6 +94,26 @@ Deno.serve(async (req) => {
       return json({ fields: parseJson(text) });
     }
 
+    if (mode === "room_summary") {
+      const { data: room } = await sb.from("rooms").select("title,description").eq("id", body.room_id).single();
+      if (!room) return json({ error: "الغرفة غير موجودة" }, 404);
+      const { data: msgs } = await sb.from("room_messages").select("user_id,kind,body,file_name,created_at").eq("room_id", body.room_id).order("created_at").limit(400);
+      const ids = [...new Set((msgs ?? []).map((m: any) => m.user_id).filter(Boolean))];
+      const { data: ppl } = ids.length ? await sb.from("profiles").select("id,full_name,job_title").in("id", ids) : { data: [] };
+      const nm: Record<string, string> = {};
+      for (const p of (ppl ?? []) as any[]) nm[p.id] = p.full_name + (p.job_title ? ` (${p.job_title})` : "");
+      const log = (msgs ?? []).filter((m: any) => m.kind !== "ai").map((m: any) => {
+        const who = nm[m.user_id] ?? "مستخدم";
+        const t = new Date(m.created_at).toISOString().slice(0, 16).replace("T", " ");
+        const what = m.kind === "text" ? m.body : m.kind === "image" ? "[أرسل صورة]" : m.kind === "audio" ? "[أرسل رسالة صوتية]" : `[أرسل مستند: ${m.file_name}]`;
+        return `${t} - ${who}: ${what}`;
+      }).join("\n");
+      if (!log) return json({ text: "لا توجد رسائل كافية للتلخيص بعد." });
+      const sys = "أنت سكرتير تنفيذي ذكي. لخّص نقاش غرفة العمليات التالية لمدير الشركة بالعربية الواضحة، بالأقسام التالية فقط وبشكل مختصر: **الخلاصة** (سطرين)، **القرارات المتخذة**، **المهام** (المهمة - المسؤول - الموعد إن ذُكر)، **نقاط عالقة تحتاج قرار المدير**. لا تخترع معلومات غير موجودة.";
+      const text = await claude(sys, [{ role: "user", content: `الغرفة: ${room.title}\n${room.description ?? ""}\n\nالمحادثة:\n${log}` }], 1500);
+      return json({ text });
+    }
+
     const { data: me } = await sb.from("profiles").select("full_name,role,company_id").eq("id", user.id).single();
     const cid = me?.role === "super_admin" ? body.company_id : me?.company_id;
     if (!cid) return json({ error: "اختر شركة أولاً" }, 400);
