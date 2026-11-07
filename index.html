@@ -182,8 +182,10 @@ const daysLeft = (d) => (d ? Math.round((new Date(d) - today()) / 86400000) : nu
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-SA-u-ca-gregory", { year:"numeric", month:"short", day:"numeric" }) : "-");
 const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("");
 
-const S = { session:null, me:null, settings:{ company_name:"منصة الشركة" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login" };
-const isAdmin = () => S.me?.role === "admin";
+const OWNER_EMAIL = "yousef@yaqenai.com";
+const S = { session:null, me:null, company:null, cid:null, companies:[], allPeople:[], settings:{ company_name:"يقين للأعمال" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login", signupCo:null };
+const isSuper = () => S.me?.role === "super_admin";
+const isAdmin = () => S.me?.role === "admin" || isSuper();
 const depName = (id) => S.deps.find((d) => d.id === id)?.name ?? "بدون قسم";
 const depByName = (n) => S.deps.find((d) => d.name === n)?.id;
 
@@ -244,29 +246,44 @@ const ENT = {
 const AI_EXTRACT = ["vehicles","invoices","documents","legal_cases","projects"];
 
 // ===== Data =====
-async function loadAll() {
-  const [st, dp, pp, notes, ...rest] = await Promise.all([
-    sb.from("settings").select("*").single(),
-    sb.from("departments").select("*").order("created_at"),
-    sb.from("profiles").select("*").order("created_at"),
-    sb.from("manager_notes").select("*").order("created_at", { ascending:false }),
-    ...Object.keys(ENT).map((k) => sb.from(k).select("*").order("updated_at", { ascending:false, nullsFirst:false })),
+async function loadMe() {
+  const { data } = await sb.from("profiles").select("*").eq("id", S.session.user.id).single();
+  S.me = data;
+}
+async function loadCompanies() {
+  const [c, p] = await Promise.all([
+    sb.from("companies").select("*").order("created_at", { ascending:false }),
+    sb.from("profiles").select("id,company_id,role"),
   ]);
-  if (st.data) S.settings = st.data;
+  S.companies = c.data ?? [];
+  S.allPeople = p.data ?? [];
+}
+async function loadAll() {
+  const cid = S.cid;
+  const [co, dp, pp, notes, ...rest] = await Promise.all([
+    sb.from("companies").select("*").eq("id", cid).single(),
+    sb.from("departments").select("*").eq("company_id", cid).order("created_at"),
+    sb.from("profiles").select("*").eq("company_id", cid).order("created_at"),
+    sb.from("manager_notes").select("*").eq("company_id", cid).order("created_at", { ascending:false }),
+    ...Object.keys(ENT).map((k) => sb.from(k).select("*").eq("company_id", cid).order("updated_at", { ascending:false, nullsFirst:false })),
+  ]);
+  S.company = co.data;
+  S.settings = { company_name:co.data?.name ?? "", logo_url:co.data?.logo_url };
   S.deps = dp.data ?? [];
   S.people = pp.data ?? [];
   S.data.manager_notes = notes.data ?? [];
   Object.keys(ENT).forEach((k, i) => (S.data[k] = rest[i].data ?? []));
-  S.me = S.people.find((p) => p.id === S.session.user.id) ?? S.me;
+  if (!isSuper()) S.me = S.people.find((p) => p.id === S.session.user.id) ?? S.me;
   document.title = S.settings.company_name + " | يقين";
 }
+async function reload() {
+  if (isSuper()) await loadCompanies();
+  if (S.cid) await loadAll();
+  renderShell();
+}
 async function loadPublic() {
-  try {
-    const [st, dp] = await Promise.all([sb.from("settings").select("*").single(), sb.from("departments").select("*").order("created_at")]);
-    if (st.data) S.settings = st.data;
-    S.deps = dp.data ?? [];
-    S.netErr = !!(dp.error && !dp.data);
-  } catch { S.netErr = true; }
+  S.settings = { company_name:"يقين للأعمال" };
+  try { const r = await sb.rpc("lookup_company", { code:"-" }); S.netErr = !!r.error; } catch { S.netErr = true; }
 }
 
 function toast(t) {
@@ -292,7 +309,7 @@ async function uploadImage(file, folder) {
 }
 
 async function ai(body) {
-  const { data, error } = await sb.functions.invoke("yaqen-ai", { body });
+  const { data, error } = await sb.functions.invoke("yaqen-ai", { body:{ ...body, company_id:S.cid } });
   if (error) {
     let msg = error.message;
     try { const j = await error.context.json(); msg = j.error || msg; } catch {}
@@ -335,8 +352,8 @@ function renderAuth(message) {
   $("#app").innerHTML = `
   <div class="auth"><div class="auth-card">
     <div class="brand">
-      <div class="logo">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
-      <div><h1>${esc(s.company_name)}</h1><small>منصة الإدارة الذكية</small></div>
+      <div class="logo">${S.signupCo?.logo_url ? `<img src="${esc(S.signupCo.logo_url)}">` : "✨"}</div>
+      <div><h1>${esc(S.signupCo?.name || s.company_name)}</h1><small>منصة الإدارة الذكية</small></div>
     </div>
     <div class="tabs">
       <button class="${S.authTab === "login" ? "on" : ""}" onclick="App.authTab('login')">تسجيل الدخول</button>
@@ -349,10 +366,14 @@ function renderAuth(message) {
         <button class="btn pri full">دخول</button>
       </form>` : `
       <form onsubmit="App.signup(event)">
+        <label class="f"><span>رمز الشركة (تاخذه من مدير شركتك)</span>
+          <div class="row" style="flex-wrap:nowrap"><input class="in" name="company_code" id="coCode" dir="ltr" style="text-transform:uppercase" value="${esc(S.signupCode || "")}" placeholder="مثال: A1B2C3">
+          <button type="button" class="btn" onclick="App.checkCode()">تحقق</button></div></label>
+        ${S.signupCo ? `<div class="msg ok mb">✅ ${esc(S.signupCo.name)}${S.signupCo.is_admin_code ? " · ستسجل كمدير الشركة" : ""}</div>` : ""}
         <label class="f"><span>الاسم الكامل</span><input class="in" name="full_name" required></label>
         <div class="two">
-          <label class="f"><span>القسم</span><select class="in" name="department_id" required>
-            <option value="">اختر القسم</option>${S.deps.map((d) => `<option value="${d.id}">${esc(d.icon)} ${esc(d.name)}</option>`).join("")}
+          <label class="f"><span>القسم</span><select class="in" name="department_id" ${S.signupCo && !S.signupCo.is_admin_code ? "required" : ""}>
+            <option value="">${S.signupCo ? "اختر القسم" : "أدخل رمز الشركة أولاً"}</option>${(S.signupCo?.departments ?? []).map((d) => `<option value="${d.id}">${esc(d.icon)} ${esc(d.name)}</option>`).join("")}
           </select></label>
           <label class="f"><span>المسمى الوظيفي</span><input class="in" name="job_title"></label>
         </div>
@@ -360,10 +381,9 @@ function renderAuth(message) {
         <label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
         <label class="f"><span>كلمة المرور (6 أحرف أو أكثر)</span><input class="in" name="password" type="password" minlength="6" required dir="ltr"></label>
         <button class="btn pri full">إنشاء الحساب</button>
-        <p class="muted small mt">أول حساب يُنشأ في المنصة يصبح حساب المدير.</p>
       </form>`}
     ${message ? `<div class="msg ${message.t}">${esc(message.m)}</div>` : ""}
-    ${S.netErr || (S.authTab === "signup" && !S.deps.length) ? `<div class="msg err">تعذّر الاتصال بخادم المنصة. افتح المنصة من رابطها على الإنترنت (مثل manage.yaqenai.com) وليس من معاينة الملف.
+    ${S.netErr ? `<div class="msg err">تعذّر الاتصال بخادم المنصة. افتح المنصة من رابطها على الإنترنت (مثل manage.yaqenai.com) وليس من معاينة الملف.
       <button class="btn sm mt" onclick="App.retry()">↻ إعادة المحاولة</button></div>` : ""}
     <div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div>
   </div></div>`;
@@ -371,11 +391,14 @@ function renderAuth(message) {
 
 // ===== Shell =====
 function navItems() {
+  const top = isSuper() ? [{ sec:"مسؤول المنصة" }, { v:"platform", i:"🌐", l:"لوحة يقين (كل الشركات)" }] : [];
+  if (!S.cid) return top;
   const alerts = computeAlerts();
   const cnt = (v) => alerts.filter((a) => a.view === v).length;
   const openNotes = (S.data.manager_notes ?? []).filter((n) => n.status === "مفتوحة").length;
   return [
-    { sec:"عام" },
+    ...top,
+    { sec:isSuper() ? "الشركة: " + (S.company?.name || "") : "عام" },
     { v:"home", i:"🏠", l:"لوحة القيادة" },
     { v:"ai", i:"✨", l:"مساعد يقين الذكي" },
     { v:"notes", i:"📌", l:"ملاحظات المدير", c:openNotes },
@@ -385,12 +408,12 @@ function navItems() {
     { sec:"العمليات" },
     ...Object.entries(ENT).map(([k, c]) => ({ v:k, i:c.icon, l:c.title, c:cnt(k) })),
     { sec:"الحساب" },
-    { v:"profile", i:"👤", l:"ملفي الشخصي" },
-    ...(isAdmin() ? [{ v:"settings", i:"⚙️", l:"إعدادات المنصة" }] : []),
+    ...(isSuper() ? [] : [{ v:"profile", i:"👤", l:"ملفي الشخصي" }]),
+    ...(isAdmin() ? [{ v:"settings", i:"⚙️", l:"إعدادات الشركة" }] : []),
   ];
 }
 function titleOf(v) {
-  return ({ home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
+  return ({ platform:"لوحة يقين", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
 }
 function renderShell() {
   const s = S.settings, me = S.me;
@@ -399,8 +422,8 @@ function renderShell() {
     <div class="overlay" id="ov" onclick="App.menu(false)"></div>
     <aside class="side" id="side">
       <div class="brand">
-        <div class="logo">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
-        <div><h1 style="font-size:16px">${esc(s.company_name)}</h1><small>${isAdmin() ? "حساب المدير" : esc(depName(me?.department_id))}</small></div>
+        <div class="logo">${S.cid && s.logo_url ? `<img src="${esc(s.logo_url)}">` : S.cid ? "🏢" : "✨"}</div>
+        <div><h1 style="font-size:16px">${esc(S.cid ? s.company_name : "يقين للأعمال")}</h1><small>${isSuper() ? "مسؤول المنصة" : isAdmin() ? "مدير الشركة" : esc(depName(me?.department_id))}</small></div>
       </div>
       <nav class="nav">${navItems().map((n) => n.sec ? `<div class="sec">${n.sec}</div>` :
         `<button class="${S.view === n.v ? "on" : ""}" onclick="App.go('${n.v}')"><span class="ico">${n.i}</span>${n.l}${n.c ? `<span class="cnt">${n.c}</span>` : ""}</button>`).join("")}
@@ -413,14 +436,15 @@ function renderShell() {
       <div class="top">
         <button class="menu-btn" onclick="App.menu(true)">☰</button>
         <h2>${esc(titleOf(S.view))}</h2>
-        <div class="me" onclick="App.go('profile')">
+        <div class="me" onclick="App.go('${isSuper() ? "platform" : "profile"}')">
           <span class="nm small">${esc(me?.full_name)}</span>${avatar(me)}
         </div>
       </div>
+      ${isSuper() && S.cid && S.view !== "platform" ? `<div style="background:var(--blueSoft);color:#93C5FD;padding:8px 22px;font-size:13px" class="row">🌐 تشاهد شركة <b>${esc(S.company?.name)}</b> بصلاحية مسؤول المنصة<span class="sp"></span><button class="btn sm ghost" onclick="App.go('platform')">رجوع لكل الشركات</button></div>` : ""}
       <div class="content" id="content"></div>
     </main>
   </div>
-  ${S.view !== "ai" ? `<button class="fab" title="اسأل مساعد يقين" onclick="App.go('ai')">✨</button>` : ""}`;
+  ${S.view !== "ai" && S.cid && S.view !== "platform" ? `<button class="fab" title="اسأل مساعد يقين" onclick="App.go('ai')">✨</button>` : ""}`;
   renderView();
 }
 function avatar(p, cls = "") {
@@ -430,7 +454,8 @@ function avatar(p, cls = "") {
 function renderView() {
   const c = $("#content");
   const v = S.view;
-  if (v === "home") c.innerHTML = viewHome();
+  if (v === "platform") c.innerHTML = viewPlatform();
+  else if (v === "home") c.innerHTML = viewHome();
   else if (v === "ai") c.innerHTML = viewAI();
   else if (v === "notes") c.innerHTML = viewNotes();
   else if (v === "departments") c.innerHTML = isAdmin() ? viewDepartments() : viewDept(S.me?.department_id);
@@ -440,6 +465,40 @@ function renderView() {
   else if (v === "settings") c.innerHTML = viewSettings();
   else if (ENT[v]) c.innerHTML = viewEntity(v);
   if (v === "ai") { const m = $("#msgs"); if (m) m.scrollTop = m.scrollHeight; }
+}
+
+// ===== Platform (owner) =====
+function viewPlatform() {
+  const cos = S.companies;
+  const users = (id) => S.allPeople.filter((p) => p.company_id === id);
+  const active = cos.filter((c) => c.active).length;
+  return `
+  <div class="ai-hero mb"><div class="row">
+    <div style="font-size:34px">🌐</div>
+    <div class="sp"><b style="font-size:17px">لوحة يقين</b><div class="muted small">كل الشركات المشتركة في المنصة. كل شركة معزولة ببياناتها وموظفيها، وأنت تقدر تدخل أي شركة.</div></div>
+    <button class="btn pri" onclick="App.companyForm()">+ شركة جديدة</button>
+  </div></div>
+  <div class="grid g4 mb">
+    <div class="card"><div class="kpi"><div class="v">${cos.length}</div><div class="l">الشركات</div></div></div>
+    <div class="card"><div class="kpi"><div class="v">${active}</div><div class="l">شركات فعّالة</div></div></div>
+    <div class="card"><div class="kpi"><div class="v">${S.allPeople.filter((p) => p.role !== "super_admin").length}</div><div class="l">إجمالي المستخدمين</div></div></div>
+  </div>
+  ${cos.length ? `<div class="grid g3">${cos.map((c) => { const u = users(c.id); const adm = u.filter((p) => p.role === "admin").length; return `
+    <div class="card">
+      <div class="row"><div class="logo">${c.logo_url ? `<img src="${esc(c.logo_url)}">` : "🏢"}</div>
+        <div class="sp"><b>${esc(c.name)}</b><div class="muted small">${u.length} مستخدم · ${adm} مدير</div></div>
+        <span class="badge ${c.active ? "b-green" : "b-red"}">${c.active ? "فعّالة" : "موقوفة"}</span></div>
+      <div class="mt small">
+        <div class="row"><span class="muted">رمز الموظفين:</span><b dir="ltr">${esc(c.join_code)}</b></div>
+        <div class="row"><span class="muted">رمز المدير:</span><b dir="ltr">${esc(c.admin_code)}</b></div>
+      </div>
+      <div class="row mt">
+        <button class="btn sm pri" onclick="App.enterCompany('${c.id}')">دخول الشركة</button>
+        <button class="btn sm ghost" onclick="App.companyForm('${c.id}')">إدارة</button>
+      </div>
+    </div>`; }).join("")}</div>` :
+  `<div class="card empty"><div style="font-size:40px">🏢</div>ما فيه شركات للحين.<br>أضف أول شركة، وبيطلع لك رمزين: رمز تعطيه لمدير الشركة عشان يسجل كمدير، ورمز يوزعه المدير على موظفينه.
+    <br><button class="btn pri mt" onclick="App.companyForm()">+ شركة جديدة</button></div>`}`;
 }
 
 // ===== Home =====
@@ -686,7 +745,9 @@ function viewSettings() {
   const s = S.settings;
   return `<div class="grid g2">
     <div class="card"><h3>🏷️ هوية المنصة</h3>
-      <p class="muted small mb">اسم المنصة يظهر لكل الموظفين بدل "يقين"، مثل: DLPS Platform</p>
+      <p class="muted small mb">اسم المنصة يظهر لكل موظفي الشركة، مثل: DLPS Platform</p>
+      <div class="risk mb"><div class="muted small">رمز تسجيل الموظفين (أرسله لموظفينك)</div><b dir="ltr" style="font-size:20px;letter-spacing:2px">${esc(S.company?.join_code)}</b>
+        ${isSuper() ? `<div class="muted small mt">رمز تسجيل المدير: <b dir="ltr">${esc(S.company?.admin_code)}</b></div>` : ""}</div>
       <div class="row mb"><div class="logo" style="width:64px;height:64px">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
         <label class="btn sm">رفع شعار الشركة<input type="file" accept="image/*" class="hidden" onchange="App.logo(this)"></label></div>
       <form onsubmit="App.saveSettings(event)">
@@ -737,19 +798,79 @@ function entityForm(k, r = {}) {
 window.App = {
   authTab(t) { S.authTab = t; renderAuth(); },
   async retry() { await loadPublic(); renderAuth(); },
+
+  // ----- platform owner -----
+  async enterCompany(id) {
+    S.cid = id; S.brief = null; S.chat = []; S.view = "home"; S.param = null;
+    try { localStorage.setItem("yq_cid", id); } catch {}
+    await loadAll(); renderShell(); window.scrollTo(0, 0);
+  },
+  companyForm(id) {
+    const c = id ? S.companies.find((x) => x.id === id) : {};
+    modal(`<div class="row"><h3 class="sp">${id ? "إدارة الشركة" : "شركة جديدة"}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      <form onsubmit="App.saveCompany(event,'${id || ""}')">
+        <label class="f"><span>اسم الشركة / اسم المنصة لها</span><input class="in" name="name" value="${esc(c.name || "")}" placeholder="مثال: DLPS Platform" required></label>
+        <label class="f"><span>ملاحظات داخلية (تظهر لك فقط)</span><textarea class="in" name="notes" placeholder="جهة التواصل، الباقة، تاريخ الاشتراك...">${esc(c.notes || "")}</textarea></label>
+        ${id ? `<div class="risk mb"><div class="small">رمز الموظفين: <b dir="ltr">${esc(c.join_code)}</b></div><div class="small">رمز المدير: <b dir="ltr">${esc(c.admin_code)}</b></div>
+          <button type="button" class="btn sm ghost mt" onclick="App.regenCodes('${id}')">↻ توليد رموز جديدة</button></div>` :
+          `<p class="muted small mb">بيتم إنشاء ٧ أقسام افتراضية للشركة، ورمزين للتسجيل.</p>`}
+        <div class="row"><button class="btn pri">${id ? "حفظ" : "إنشاء الشركة"}</button><span class="sp"></span>
+          ${id ? `<button type="button" class="btn ghost" onclick="App.toggleCompany('${id}', ${!c.active})">${c.active ? "⏸ إيقاف الشركة" : "▶ تفعيل الشركة"}</button>
+          <button type="button" class="btn danger" onclick="App.delCompany('${id}')">حذف</button>` : ""}</div>
+      </form>`);
+  },
+  async saveCompany(e, id) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const row = { name:f.get("name"), notes:f.get("notes") || null };
+    const { data, error } = id ? await sb.from("companies").update(row).eq("id", id).select().single() : await sb.from("companies").insert(row).select().single();
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); await reload();
+    if (!id && data) App.companyForm(data.id);
+  },
+  async regenCodes(id) {
+    const r = () => Math.random().toString(36).slice(2).toUpperCase();
+    const { error } = await sb.from("companies").update({ join_code:r().slice(0, 6), admin_code:(r() + r()).slice(0, 10) }).eq("id", id);
+    if (error) return toast("خطأ: " + error.message);
+    await reload(); App.companyForm(id); toast("تم توليد رموز جديدة، الرموز القديمة ما عادت تشتغل");
+  },
+  async toggleCompany(id, active) {
+    await sb.from("companies").update({ active }).eq("id", id);
+    App.close(); await reload(); toast(active ? "تم تفعيل الشركة" : "تم إيقاف الشركة، موظفينها ما يقدرون يشوفون البيانات");
+  },
+  async delCompany(id) {
+    const c = S.companies.find((x) => x.id === id);
+    if (!confirm(`حذف "${c?.name}" نهائياً مع كل بياناتها وحسابات موظفيها؟ ما يمكن التراجع.`)) return;
+    const { error } = await sb.rpc("delete_company", { target:id });
+    if (error) return toast("خطأ: " + error.message);
+    if (S.cid === id) { S.cid = null; try { localStorage.removeItem("yq_cid"); } catch {} }
+    App.close(); S.view = "platform"; await reload();
+  },
   async login(e) {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.auth.signInWithPassword({ email:f.get("email"), password:f.get("password") });
     if (error) renderAuth({ t:"err", m:error.message.includes("Invalid") ? "البريد أو كلمة المرور غير صحيحة" : error.message.includes("confirm") ? "فعّل حسابك من الرابط اللي وصلك على البريد أولاً" : error.message });
   },
+  async checkCode() {
+    const code = ($("#coCode")?.value || "").trim().toUpperCase();
+    S.signupCode = code;
+    if (!code) return;
+    const { data } = await sb.rpc("lookup_company", { code });
+    S.signupCo = data || null;
+    renderAuth(data ? null : { t:"err", m:"رمز الشركة غير صحيح" });
+  },
   async signup(e) {
     e.preventDefault(); const f = new FormData(e.target);
-    const { data, error } = await sb.auth.signUp({ email:f.get("email"), password:f.get("password"),
-      options:{ emailRedirectTo:location.origin + location.pathname, data:{ full_name:f.get("full_name"), department_id:f.get("department_id"), job_title:f.get("job_title"), phone:f.get("phone") } } });
-    if (error) return renderAuth({ t:"err", m:error.message.includes("registered") ? "هذا البريد مسجل مسبقاً" : error.message });
+    const email = String(f.get("email")).trim().toLowerCase();
+    const code = String(f.get("company_code") || "").trim().toUpperCase();
+    if (email !== OWNER_EMAIL) {
+      if (!S.signupCo || S.signupCode !== code) { await App.checkCode(); if (!S.signupCo) return; }
+    }
+    const { data, error } = await sb.auth.signUp({ email, password:f.get("password"),
+      options:{ emailRedirectTo:location.origin + location.pathname, data:{ full_name:f.get("full_name"), company_code:code, department_id:f.get("department_id"), job_title:f.get("job_title"), phone:f.get("phone") } } });
+    if (error) return renderAuth({ t:"err", m:error.message.includes("registered") ? "هذا البريد مسجل مسبقاً" : error.message.includes("Database error") ? "رمز الشركة غير صحيح" : error.message });
     if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب ✅ أرسلنا لك رابط تفعيل على بريدك، فعّله ثم سجّل دخولك." }); }
   },
-  async logout() { await sb.auth.signOut(); },
+  async logout() { try { localStorage.removeItem("yq_cid"); } catch {} S.cid = null; S.company = null; S.brief = null; S.chat = []; S.view = "home"; await sb.auth.signOut(); },
   menu(o) { $("#side")?.classList.toggle("open", o); $("#ov")?.classList.toggle("open", o); },
   go(v, param = null) { S.view = v; S.param = param; renderShell(); window.scrollTo(0, 0); },
   close() { $("#modal-root").innerHTML = ""; },
@@ -765,16 +886,16 @@ window.App = {
     if (k === "projects" && row.progress != null) row.progress = Math.max(0, Math.min(100, Math.round(row.progress)));
     row.department_id = fd.get("department_id") || null;
     row.updated_at = new Date().toISOString();
-    const q = id ? sb.from(k).update(row).eq("id", id) : sb.from(k).insert(row);
+    const q = id ? sb.from(k).update(row).eq("id", id) : sb.from(k).insert({ ...row, company_id:S.cid });
     const { error } = await q;
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم الحفظ ✅"); await loadAll(); renderShell();
+    App.close(); toast("تم الحفظ ✅"); await reload();
   },
   async del(k, id) {
     if (!confirm("متأكد من الحذف؟")) return;
     const { error } = await sb.from(k).delete().eq("id", id);
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم الحذف"); await loadAll(); renderShell();
+    App.close(); toast("تم الحذف"); await reload();
   },
   async scan(k, input) {
     const file = input.files[0]; if (!file) return;
@@ -825,9 +946,9 @@ window.App = {
   noteFromAI(dep, title, why) { App.noteForm(dep, title, why); },
   async saveNote(e) {
     e.preventDefault(); const f = new FormData(e.target);
-    const { error } = await sb.from("manager_notes").insert({ department_id:f.get("department_id"), subject:f.get("subject") || null, body:f.get("body"), due_date:f.get("due_date") || null });
+    const { error } = await sb.from("manager_notes").insert({ company_id:S.cid, department_id:f.get("department_id"), subject:f.get("subject") || null, body:f.get("body"), due_date:f.get("due_date") || null });
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم إرسال الملاحظة ✅"); await loadAll(); renderShell();
+    App.close(); toast("تم إرسال الملاحظة ✅"); await reload();
   },
   replyForm(id) {
     const n = S.data.manager_notes.find((x) => x.id === id);
@@ -849,10 +970,10 @@ window.App = {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.from("manager_notes").update({ reply:f.get("reply"), status:"تم الرد" }).eq("id", id);
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم إرسال الرد ✅"); await loadAll(); renderShell();
+    App.close(); toast("تم إرسال الرد ✅"); await reload();
   },
-  async noteStatus(id, status) { await sb.from("manager_notes").update({ status }).eq("id", id); await loadAll(); renderShell(); },
-  async delNote(id) { if (!confirm("حذف الملاحظة؟")) return; await sb.from("manager_notes").delete().eq("id", id); await loadAll(); renderShell(); },
+  async noteStatus(id, status) { await sb.from("manager_notes").update({ status }).eq("id", id); await reload(); },
+  async delNote(id) { if (!confirm("حذف الملاحظة؟")) return; await sb.from("manager_notes").delete().eq("id", id); await reload(); },
 
   personForm(id) {
     const p = S.people.find((x) => x.id === id); if (!p) return;
@@ -874,20 +995,20 @@ window.App = {
     if (f.get("role")) row.role = f.get("role");
     const { error } = await sb.from("profiles").update(row).eq("id", id);
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم الحفظ ✅"); await loadAll(); renderShell();
+    App.close(); toast("تم الحفظ ✅"); await reload();
   },
   async delUser(id) {
     const p = S.people.find((x) => x.id === id);
     if (!confirm(`حذف ${p?.full_name} نهائياً من المنصة؟ ما يقدر يدخل بعدها.`)) return;
     const { error } = await sb.rpc("admin_delete_user", { target:id });
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم حذف المستخدم"); await loadAll(); renderShell();
+    App.close(); toast("تم حذف المستخدم"); await reload();
   },
 
   async myPhoto(input) {
     const file = input.files[0]; if (!file) return;
     try { toast("جاري الرفع..."); const url = await uploadImage(file, S.me.id);
-      await sb.from("profiles").update({ avatar_url:url }).eq("id", S.me.id); await loadAll(); renderShell(); toast("تم تحديث الصورة ✅"); }
+      await sb.from("profiles").update({ avatar_url:url }).eq("id", S.me.id); await reload(); toast("تم تحديث الصورة ✅"); }
     catch (err) { toast("خطأ: " + err.message); }
   },
   async saveProfile(e) {
@@ -896,28 +1017,28 @@ window.App = {
     if (f.has("department_id") && (isAdmin() || !S.me.department_id)) row.department_id = f.get("department_id") || null;
     const { error } = await sb.from("profiles").update(row).eq("id", S.me.id);
     if (error) return toast("خطأ: " + error.message);
-    toast("تم الحفظ ✅"); await loadAll(); renderShell();
+    toast("تم الحفظ ✅"); await reload();
   },
   async saveSettings(e) {
     e.preventDefault(); const f = new FormData(e.target);
-    const { error } = await sb.from("settings").update({ company_name:f.get("company_name"), updated_at:new Date().toISOString() }).eq("id", 1);
+    const { error } = await sb.from("companies").update({ name:f.get("company_name") }).eq("id", S.cid);
     if (error) return toast("خطأ: " + error.message);
-    toast("تم الحفظ ✅"); await loadAll(); renderShell();
+    toast("تم الحفظ ✅"); await reload();
   },
   async logo(input) {
     const file = input.files[0]; if (!file) return;
-    try { const url = await uploadImage(file, S.me.id + "/logo"); await sb.from("settings").update({ logo_url:url }).eq("id", 1); await loadAll(); renderShell(); toast("تم رفع الشعار ✅"); }
+    try { const url = await uploadImage(file, S.me.id + "/logo"); await sb.from("companies").update({ logo_url:url }).eq("id", S.cid); await reload(); toast("تم رفع الشعار ✅"); }
     catch (err) { toast("خطأ: " + err.message); }
   },
   async addDept(e) {
     e.preventDefault(); const f = new FormData(e.target);
-    const { error } = await sb.from("departments").insert({ name:f.get("name"), icon:f.get("icon") || "🏢" });
+    const { error } = await sb.from("departments").insert({ company_id:S.cid, name:f.get("name"), icon:f.get("icon") || "🏢" });
     if (error) return toast("خطأ: " + error.message);
-    await loadAll(); renderShell();
+    await reload();
   },
   async delDept(id) {
     if (!confirm("حذف القسم؟ الموظفين والسجلات فيه بتصير بدون قسم.")) return;
-    await sb.from("departments").delete().eq("id", id); await loadAll(); renderShell();
+    await sb.from("departments").delete().eq("id", id); await reload();
   },
 };
 
@@ -926,8 +1047,23 @@ async function boot(session) {
   S.session = session;
   if (!session) { await loadPublic(); return renderAuth(); }
   $("#app").innerHTML = `<div class="auth"><span class="spin" style="width:32px;height:32px;color:var(--green)"></span></div>`;
+  await loadMe();
+  if (!S.me) return blocked("ما قدرنا نلقى ملفك في المنصة. تواصل مع مدير شركتك.");
+  if (isSuper()) {
+    await loadCompanies();
+    let saved = null; try { saved = localStorage.getItem("yq_cid"); } catch {}
+    if (saved && S.companies.some((c) => c.id === saved)) { S.cid = saved; await loadAll(); S.view = "home"; }
+    else { S.cid = null; S.view = "platform"; }
+    return renderShell();
+  }
+  S.cid = S.me.company_id;
   await loadAll();
+  if (!S.company) return blocked("حساب شركتك موقوف حالياً. تواصل مع مدير شركتك أو مع يقين.");
   renderShell();
+}
+function blocked(m) {
+  $("#app").innerHTML = `<div class="auth"><div class="auth-card" style="text-align:center"><div style="font-size:40px">⏸</div><p class="mt">${esc(m)}</p>
+    <button class="btn mt" onclick="App.logout()">تسجيل الخروج</button><div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div></div></div>`;
 }
 let started = false;
 sb.auth.onAuthStateChange((ev, session) => {
