@@ -1,0 +1,67 @@
+psql:/home/claude/yaqen-manage/tests/db/00_lib.sql:2: NOTICE:  schema "qa" does not exist, skipping
+FAIL | C1 | PERF invoices: full list 20,000 rows (report query) | 3655.0 ms
+FAIL | C1 | PERF invoices: page 1 (50 rows) | 3689.7 ms
+FAIL | C1 | PERF invoices: page 200 (offset 9,950) | 3488.4 ms
+FAIL | C1 | PERF invoices: server search "INV-1999" | 3873.4 ms
+FAIL | C1 | PERF invoices: exact count for pager | 3616.3 ms
+FAIL | C1 | PERF finance employee: invoices page 1 | 4158.6 ms
+FAIL | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 4341.7 ms
+FAIL | C3 | employee who picked Finance at sign-up reads finance invoice | got [1] expected [0]
+FAIL | C3 | employee who picked a department at sign-up has no department until admin assigns | got [efd7e983-574d-4624-8322-b0abcca418dc] expected [none]
+FAIL | C3 | new join-code sign-up is pending admin approval | column "status" does not exist
+FAIL | C3 | pending employee sees own company data | got [7] expected [0]
+FAIL | C3 | admin code is single-use (rotated after the admin signed up) | admin_code still the original
+FAIL | C3 | lookup_company refuses after 30 failed guesses from one IP | still answering after 30 failures
+PASS | C3 | lookup_company still works for a normal user from another IP | 
+FAIL | C3 | lookup_company does not reveal department ids to anonymous callers | 
+FAIL | H2 | PERF dashboard: overdue invoices sum | 1459.2 ms
+FAIL | H2 | PERF vehicles: page 1 | 612.6 ms
+FAIL | H2 | PERF vehicles: full list 3,000 | 712.1 ms
+PASS | H2 | PERF employees: page 1 | 33.6 ms
+PASS | H2 | PERF employees: full list 1,500 | 33.9 ms
+FAIL | H3 | created_by cannot be spoofed on insert | got [00000000-0000-0000-0000-0000000000a1] expected [00000000-0000-0000-0000-0000000000a2]
+FAIL | H3 | audit log records the insert with the real actor | relation "audit_log" does not exist
+FAIL | H3 | audit log records the update with before/after | relation "audit_log" does not exist
+FAIL | H3 | company admin cannot edit the audit log | 
+FAIL | H3 | company admin cannot delete the audit log | 
+FAIL | H3 | company admin sees only own company audit rows | got [BLOCKED: relation "audit_log" does not exist] expected [0]
+FAIL | H3 | company admin sees own company audit rows | 
+FAIL | H4 | AI usage is metered per company with a limit check | 
+FAIL | H6 | expiring document creates a notification for company admins | relation "notifications" does not exist
+FAIL | H6 | notifications exist and are private to their user | 
+FAIL | L1 | anon lists avatar file names | got [1] expected [0]
+FAIL | L2 | service/maintenance context can deactivate a company | got [true] expected [false]
+FAIL | M1 | room member overwrites translation of another user message | 1
+FAIL | M2 | duplicate plate in same company (spacing/case differs) | 1
+FAIL | M2 | duplicate outgoing invoice number in same company | 1
+PASS | M2 | same incoming invoice number from two different suppliers is allowed | 2
+FAIL | M4 | new company codes come from a CSPRNG (join >= 12, admin >= 16 chars) | 90226C / EBC30EE831
+FAIL | M6 | deleted record is hidden from the app | got [1] expected [0]
+FAIL | M6 | deleted record still exists in the database (recoverable) | column "deleted_at" does not exist
+FAIL | M6 | restore brings the record back | 
+FAIL | M6 | hard DELETE through the API is refused for company admins | 1
+FAIL | M6 | employee cannot soft-delete | 
+FAIL | M7 | no e-mail address hard-coded in sign-up trigger | 
+PASS | MT | B employee reads company A vehicle | 0
+PASS | MT | B employee reads A invoices/profiles/rooms/messages | 0/0/0/0
+PASS | MT | B employee inserts vehicle into A | BLOCKED: new row violates row-level security policy for table "vehicles"
+PASS | MT | B employee updates A vehicle | 0
+PASS | MT | A driver moves own vehicle to company B | BLOCKED: new row violates row-level security policy for table "vehicles"
+PASS | MT | A admin deletes B user | BLOCKED: غير مصرح
+PASS | MT | A admin deletes company B | BLOCKED: غير مصرح
+PASS | MT | A admin renames company B | 0
+PASS | MT | B employee lists A room files | 0
+PASS | MT | B employee joins A room | BLOCKED: الموظف ليس من نفس الشركة
+PASS | MT | A admin adds B employee to A room | BLOCKED: الموظف ليس من نفس الشركة
+PASS | MT | anon reads any business table | 0
+PASS | MT | owner (super) sees both companies | 2
+PASS | PERF | finance employee sees exactly the 20,000 finance invoices | 20000
+PASS | PERF | fleet employee sees 0 invoices | 0
+PASS | PERF | big-company admin sees none of the other 49 companies invoices | 0
+PASS | PERM | A driver (fleet) reads finance invoice | 0
+PASS | PERM | A finance (assigned by admin) reads finance invoice | 1
+PASS | PERM | A driver promotes self to admin | employee
+PASS | PERM | A driver creates department | BLOCKED: new row violates row-level security policy for table "departments"
+PASS | PERM | A driver marks manager note done / edits manager text | مفتوحة|جدد التأمين
+PASS | PERM | A driver deletes admin message | 0
+---- 26 passed, 39 failed of 65
