@@ -2,7 +2,7 @@
 name: CI
 on:
   push:
-    branches: [main, "hardening/**"]
+    branches: [main, "hardening/**", "feature/**"]
   pull_request:
 permissions:
   contents: read
@@ -31,6 +31,10 @@ jobs:
         run: tests/run_db_tests.sh
       - name: MCP connector end-to-end (core + staging DB)
         run: node --experimental-strip-types --test tests/mcp/mcp.test.mjs
+      - name: Executive report screen shows the database figures
+        run: |
+          npm i --no-save playwright@1
+          node tests/e2e/exec_report.mjs
       - name: Every migration rolls back and re-applies
         run: staging/test_rollback.sh
       - name: Backup and restore are verifiable

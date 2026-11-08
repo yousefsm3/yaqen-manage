@@ -1,10 +1,10 @@
-PASS | C1 | PERF invoices: full list 20,000 rows (report query) | 7.9 ms
-PASS | C1 | PERF invoices: page 1 (50 rows) | 0.6 ms
-PASS | C1 | PERF invoices: page 200 (offset 9,950) | 15.3 ms
-PASS | C1 | PERF invoices: server search "INV-1999" | 8.9 ms
-PASS | C1 | PERF invoices: exact count for pager | 4.2 ms
-PASS | C1 | PERF finance employee: invoices page 1 | 0.5 ms
-PASS | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 6.4 ms
+PASS | C1 | PERF invoices: full list 20,000 rows (report query) | 6.6 ms
+PASS | C1 | PERF invoices: page 1 (50 rows) | 0.5 ms
+PASS | C1 | PERF invoices: page 200 (offset 9,950) | 12.2 ms
+PASS | C1 | PERF invoices: server search "INV-1999" | 7.0 ms
+PASS | C1 | PERF invoices: exact count for pager | 4.7 ms
+PASS | C1 | PERF finance employee: invoices page 1 | 0.4 ms
+PASS | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 5.2 ms
 PASS | C3 | employee who picked Finance at sign-up reads finance invoice | 0
 PASS | C3 | employee who picked a department at sign-up has no department until admin assigns | none
 PASS | C3 | new join-code sign-up is pending admin approval | 
@@ -26,12 +26,12 @@ PASS | H2 | admin dashboard_stats counts all company vehicles | 2
 PASS | H2 | fleet employee dashboard does not reveal receivables of finance | 0
 PASS | H2 | other company admin gets zeros for company A | 0/0
 PASS | H2 | company_alerts returns the expiring document | 
-PASS | H2 | PERF dashboard: overdue invoices sum | 3.8 ms
-PASS | H2 | PERF vehicles: page 1 | 0.7 ms
-PASS | H2 | PERF vehicles: full list 3,000 | 1.4 ms
-PASS | H2 | PERF employees: page 1 | 0.5 ms
-PASS | H2 | PERF employees: full list 1,500 | 1.3 ms
-PASS | H2 | PERF dashboard: dashboard_stats() RPC | 12.9 ms
+PASS | H2 | PERF dashboard: overdue invoices sum | 4.6 ms
+PASS | H2 | PERF vehicles: page 1 | 0.6 ms
+PASS | H2 | PERF vehicles: full list 3,000 | 1.6 ms
+PASS | H2 | PERF employees: page 1 | 0.6 ms
+PASS | H2 | PERF employees: full list 1,500 | 1.5 ms
+PASS | H2 | PERF dashboard: dashboard_stats() RPC | 11.0 ms
 PASS | H3 | created_by cannot be spoofed on insert | 00000000-0000-0000-0000-0000000000a2
 PASS | H3 | audit log records the insert with the real actor | 
 PASS | H3 | audit log records the update with before/after | 
@@ -61,7 +61,7 @@ PASS | M1 | room member overwrites translation of another user message | BLOCKED
 PASS | M2 | duplicate plate in same company (spacing/case differs) | BLOCKED: duplicate key value violates unique constraint "vehicles_company_plate_uniq"
 PASS | M2 | duplicate outgoing invoice number in same company | BLOCKED: duplicate key value violates unique constraint "invoices_company_out_number_uniq"
 PASS | M2 | same incoming invoice number from two different suppliers is allowed | 2
-PASS | M4 | new company codes come from a CSPRNG (join >= 12, admin >= 16 chars) | 9NVSBJ9PCPWB / PDSCZ8F3SSUB9ZM3
+PASS | M4 | new company codes come from a CSPRNG (join >= 12, admin >= 16 chars) | 6U4SBWKW66SD / EGFWCUM44BKCBBXY
 PASS | M4 | company admin can rotate the join code but not see/rotate the admin code | 
 PASS | M4 | company admin cannot rotate the admin code | 
 PASS | M5 | MFA off: admin with password-only session keeps admin access | true
@@ -162,17 +162,17 @@ PASS | MCP-E | 31st call within a minute -> RATE_LIMITED_MINUTE | RATE_LIMITED_M
 PASS | MCP-E | rate limit is per user (other user unaffected) | true
 PASS | MCP-E | admin reads own company usage | true
 PASS | MCP-E | employee cannot read usage log | 0
-PASS | MCP-F | admin: select public.mcp_company_overview() | 42.3 ms
-PASS | MCP-F | admin: select public.mcp_invoices(p_min_days_overdue => 30) | 10.9 ms
-PASS | MCP-F | admin: select public.mcp_invoices(p_limit => 50, p_offset => 10000) | 41.5 ms
-PASS | MCP-F | admin: select public.mcp_fleet() | 3.6 ms
-PASS | MCP-F | admin: select public.mcp_expiring(30) | 15.6 ms
-PASS | MCP-F | admin: select public.mcp_people() | 3.5 ms
-PASS | MCP-F | admin: select public.mcp_search('INV-19') | 15.0 ms
+PASS | MCP-F | admin: select public.mcp_company_overview() | 50.1 ms
+PASS | MCP-F | admin: select public.mcp_invoices(p_min_days_overdue => 30) | 11.5 ms
+PASS | MCP-F | admin: select public.mcp_invoices(p_limit => 50, p_offset => 10000) | 39.9 ms
+PASS | MCP-F | admin: select public.mcp_fleet() | 2.9 ms
+PASS | MCP-F | admin: select public.mcp_expiring(30) | 12.4 ms
+PASS | MCP-F | admin: select public.mcp_people() | 2.4 ms
+PASS | MCP-F | admin: select public.mcp_search('INV-19') | 12.0 ms
 PASS | MCP-F | admin: select public.mcp_projects(p_late_only => true) | 1.4 ms
-PASS | MCP-F | admin: select public.mcp_profit_comparison(date_trunc('month', current_date): | 18.3 ms
-PASS | MCP-F | finance employee: select public.mcp_invoices(p_min_days_overdue => 30) | 10.3 ms
-PASS | MCP-F | finance employee: select public.mcp_profit_comparison(date_trunc('month', current_date): | 16.4 ms
+PASS | MCP-F | admin: select public.mcp_profit_comparison(date_trunc('month', current_date): | 15.3 ms
+PASS | MCP-F | finance employee: select public.mcp_invoices(p_min_days_overdue => 30) | 8.4 ms
+PASS | MCP-F | finance employee: select public.mcp_profit_comparison(date_trunc('month', current_date): | 13.7 ms
 PASS | MON | client error is recorded with user and company | 1
 PASS | MON | client error logging is rate-limited (30/hour/user) | 30
 PASS | MON | only the platform owner can read system events | 0

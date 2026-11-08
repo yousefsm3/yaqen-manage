@@ -199,6 +199,12 @@ input[type=range]{width:100%;accent-color:var(--green)}
 table.t{width:100%;border-collapse:collapse;font-size:14px}
 table.t td,table.t th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right}
 table.t th{color:var(--muted);font-weight:500;font-size:13px}
+@media print {
+  .side, .top, .noprint, #demoBar, .fab, .toast { display:none !important; }
+  body, .main, .card { background:#fff !important; color:#000 !important; }
+  .card { border:1px solid #ccc !important; box-shadow:none !important; break-inside:avoid; }
+  .shell { display:block !important; }
+}
 </style>
 </head>
 <body>
@@ -514,6 +520,7 @@ function navItems() {
     { sec:isSuper() ? "الشركة: " + (S.company?.name || "") : "عام" },
     { v:"home", i:"🏠", l:"لوحة القيادة" },
     { v:"ai", i:"✨", l:"مساعد يقين الذكي" },
+    { v:"assistant", i:"🧭", l:"المساعد التنفيذي" },
     { v:"rooms", i:"🗣️", l:"غرف العمليات", c:(S.rooms ?? []).filter((r) => r.status === "مفتوحة").length || 0 },
     { v:"notes", i:"📌", l:"ملاحظات المدير", c:openNotes },
     { sec:"الشركة" },
@@ -528,7 +535,7 @@ function navItems() {
   ];
 }
 function titleOf(v) {
-  return ({ platform:"لوحة يقين", rooms:"غرف العمليات", room:(S.rooms ?? []).find((r) => r.id === S.param)?.title ?? "غرفة عمليات", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", audit:"سجل التدقيق", trash:"سلة المحذوفات", whatsapp:"رسائل الواتساب", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
+  return ({ platform:"لوحة يقين", rooms:"غرف العمليات", room:(S.rooms ?? []).find((r) => r.id === S.param)?.title ?? "غرفة عمليات", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", audit:"سجل التدقيق", assistant:"المساعد التنفيذي", trash:"سلة المحذوفات", whatsapp:"رسائل الواتساب", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
 }
 function renderShell() {
   const s = S.settings, me = S.me;
@@ -576,6 +583,7 @@ function renderView() {
   else if (v === "platform") c.innerHTML = viewPlatform();
   else if (v === "home") c.innerHTML = viewHome();
   else if (v === "ai") c.innerHTML = viewAI();
+  else if (v === "assistant") c.innerHTML = viewAssistant();
   else if (v === "notes") c.innerHTML = viewNotes();
   else if (v === "departments") c.innerHTML = isAdmin() ? viewDepartments() : viewDept(S.me?.department_id);
   else if (v === "dept") c.innerHTML = viewDept(S.param);
@@ -1089,6 +1097,154 @@ function recCard(k, r) {
     ${cfg.progress ? `<div class="bar"><i style="width:${r.progress || 0}%"></i></div><div class="muted small">${r.progress || 0}% · ${fmtSAR(r.contract_value)}</div>` : ""}
     <div class="meta">${badges.join("")}</div></div>`;
 }
+
+// ===== Executive assistant: suggested prompts -> deterministic reports (no language model, no cost) =====
+// Numbers come only from the database (report_profit_comparison, SECURITY INVOKER: the user's own permissions).
+// Prompts whose data Yaqen does not record are shown disabled with the reason, never answered with guesses.
+const RIYADH_TZ = "Asia/Riyadh";
+function riyadhToday(now = new Date()) {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone:RIYADH_TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(now);
+  return p;   // YYYY-MM-DD
+}
+const ymd = (y, m, d) => new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+// periods for a prompt key, given today's date in Riyadh (pure: tested in tests/e2e)
+function periodsFor(key, today) {
+  const [y, m] = today.split("-").map(Number);   // m = 1..12
+  const monthStart = (yy, mm) => ymd(yy, mm - 1, 1), monthEnd = (yy, mm) => ymd(yy, mm, 0);
+  const prev = (yy, mm) => (mm === 1 ? [yy - 1, 12] : [yy, mm - 1]);
+  if (key === "this_vs_last") {
+    const [py, pm] = prev(y, m);
+    return { a:{ from:monthStart(y, m), to:monthEnd(y, m), partial:true }, b:{ from:monthStart(py, pm), to:monthEnd(py, pm) } };
+  }
+  if (key === "last_vs_before") {
+    const [py, pm] = prev(y, m), [qy, qm] = prev(py, pm);
+    return { a:{ from:monthStart(py, pm), to:monthEnd(py, pm) }, b:{ from:monthStart(qy, qm), to:monthEnd(qy, qm) } };
+  }
+  if (key === "month_vs_last_year") {
+    return { a:{ from:monthStart(y, m), to:monthEnd(y, m), partial:true }, b:{ from:monthStart(y - 1, m), to:monthEnd(y - 1, m) } };
+  }
+  return null;
+}
+const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const periodName = (p) => {
+  const [y, m, d] = p.from.split("-").map(Number), [y2, m2, d2] = p.to.split("-").map(Number);
+  const full = d === 1 && new Date(Date.UTC(y2, m2, 0)).getUTCDate() === d2 && y === y2 && m === m2;
+  return full ? `${MONTHS_AR[m - 1]} ${y}` : `${p.from} إلى ${p.to}`;
+};
+const PROMPTS = [
+  { id:"this_vs_last", text:"قارن هذا الشهر بالشهر السابق", kind:"report" },
+  { id:"last_vs_before", text:"قارن الشهر الماضي بالذي قبله", kind:"report" },
+  { id:"month_vs_last_year", text:"قارن هذا الشهر بنفس الشهر من السنة الماضية", kind:"report" },
+  { id:"late_projects", text:"ما المشاريع المتأخرة؟", kind:"view", go:() => { App.go("projects"); App.filter("projects", "متأخر"); } },
+  { id:"late_invoices", text:"ما الفواتير المتأخرة؟", kind:"view", go:() => { App.go("invoices"); App.filter("invoices", "متأخرة"); } },
+  { id:"expiring", text:"ما الالتزامات التي تنتهي قريباً؟", kind:"view", go:() => App.go("home") },
+  { id:"over_budget", text:"ما المشاريع التي تجاوزت ميزانيتها؟", kind:"unavailable", why:"لا توجد ميزانيات أو تكاليف للمشاريع في يقين." },
+  { id:"top_profit", text:"ما أكثر مشروع يحقق ربحية؟", kind:"unavailable", why:"الفواتير غير مربوطة بالمشاريع، ولا توجد تكاليف مشاريع." },
+  { id:"site_costs", text:"قارن مصروفات المواقع", kind:"unavailable", why:"لا يوجد دفتر مصروفات ولا كيان للمواقع في يقين." },
+  { id:"equipment_cost", text:"ما المعدات الأعلى تكلفة؟", kind:"unavailable", why:"تكاليف المعدات غير مسجلة في يقين." },
+];
+function viewAssistant() {
+  const r = S.report;
+  if (r?.data || r?.loading || r?.error) return viewReport();
+  return `<div class="card mb"><h3>🧭 المساعد التنفيذي</h3>
+      <p class="muted small">اختر سؤالاً. الأرقام تُحسب من سجلات يقين مباشرة وحسب صلاحياتك، بدون تقدير أو تخمين. السؤال الحر متاح عبر موصل يقين في Claude.</p></div>
+    <div class="grid g2">${PROMPTS.map((p) => p.kind === "unavailable"
+      ? `<div class="card" style="opacity:.6"><b>${esc(p.text)}</b><div class="muted small mt">غير متاح: ${esc(p.why)}</div></div>`
+      : `<button class="card" style="text-align:right;cursor:pointer" onclick="Exec.run('${p.id}')"><b>${esc(p.text)}</b>
+          <div class="muted small mt">${p.kind === "report" ? "تقرير مقارنة كامل" : "يفتح الشاشة المناسبة"}</div></button>`).join("")}</div>`;
+}
+const fmtMoney = (v) => v == null ? "—" : fmtSAR(Number(v));
+const pctTxt = (c) => c?.pct == null ? "—" : `${c.pct > 0 ? "▲" : c.pct < 0 ? "▼" : ""} ${Math.abs(c.pct).toLocaleString("ar-SA")}%`;
+const KPIS = [
+  { k:"revenue_invoiced", l:"إيرادات مفوترة (فواتير صادرة)", drill:{ kind:"صادرة" } },
+  { k:"supplier_invoiced", l:"فواتير الموردين (واردة)", drill:{ kind:"واردة" } },
+  { k:"net_invoiced", l:"صافي الفوترة (الصادرة ناقص الواردة)", drill:null },
+  { k:"collected", l:"المحصّل من الصادرة (حالتها مدفوعة)", drill:{ kind:"صادرة", paid:true } },
+  { k:"outstanding", l:"غير المحصّل من الصادرة", drill:{ kind:"صادرة", paid:false } },
+];
+function barChart(d) {
+  const rows = KPIS.filter((x) => x.k !== "net_invoiced");
+  const max = Math.max(1, ...rows.flatMap((x) => [Number(d.periods.a[x.k]) || 0, Number(d.periods.b[x.k]) || 0]));
+  const W = 560, rowH = 46, H = rows.length * rowH + 30, x0 = 190, bw = W - x0 - 20;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="مقارنة الفترتين" style="max-width:640px;direction:ltr">
+    ${rows.map((x, i) => { const a = Number(d.periods.a[x.k]) || 0, b = Number(d.periods.b[x.k]) || 0, y = 10 + i * rowH;
+      return `<text x="${x0 - 8}" y="${y + 18}" text-anchor="end" font-size="12" fill="currentColor">${esc(x.l.split(" (")[0])}</text>
+        <rect x="${x0}" y="${y + 4}" width="${(a / max) * bw}" height="14" rx="3" fill="var(--green)"><title>${esc(periodName(d.periods.a))}: ${a}</title></rect>
+        <rect x="${x0}" y="${y + 20}" width="${(b / max) * bw}" height="14" rx="3" fill="#64748b"><title>${esc(periodName(d.periods.b))}: ${b}</title></rect>`; }).join("")}
+    <rect x="${x0}" y="${H - 16}" width="10" height="10" fill="var(--green)"/><text x="${x0 + 14}" y="${H - 7}" font-size="11" fill="currentColor">${esc(periodName(d.periods.a))}</text>
+    <rect x="${x0 + 200}" y="${H - 16}" width="10" height="10" fill="#64748b"/><text x="${x0 + 214}" y="${H - 7}" font-size="11" fill="currentColor">${esc(periodName(d.periods.b))}</text>
+  </svg>`;
+}
+function viewReport() {
+  const r = S.report;
+  if (r.loading) return `<div class="card"><span class="spin"></span> جاري حساب التقرير…</div>`;
+  if (r.error) return `<div class="card"><div class="msg err">${esc(r.error)}</div><button class="btn mt" onclick="Exec.back()">→ رجوع للأسئلة</button></div>`;
+  const d = r.data, A = d.periods.a, B = d.periods.b, empty = !A.revenue_count && !A.supplier_count && !B.revenue_count && !B.supplier_count;
+  return `<div id="reportView">
+    <div class="row mb noprint"><button class="btn sm ghost" onclick="Exec.back()">→ الأسئلة</button><span class="sp"></span>
+      <button class="btn sm" onclick="window.print()">🖨️ طباعة / حفظ PDF</button></div>
+    <div class="card mb"><h3>${esc(r.title)}</h3>
+      <div class="muted small">${esc(periodName(A))} مقابل ${esc(periodName(B))} · ${esc(d.basis_ar)} · العملة: ريال</div>
+      <div class="muted small">وقت الحساب: ${esc(new Date(d.as_of).toLocaleString("ar-SA"))} · آخر تحديث للفواتير: ${d.data_last_updated ? esc(new Date(d.data_last_updated).toLocaleString("ar-SA")) : "لا يوجد"}</div>
+      ${r.partial ? `<div class="msg mt">الشهر الحالي لم يكتمل بعد: الأرقام تشمل الفواتير المستحقة حتى نهاية الشهر المسجلة حتى الآن.</div>` : ""}
+      ${empty ? `<div class="msg mt">لا توجد فواتير ضمن صلاحياتك في هاتين الفترتين.</div>` : ""}</div>
+    <div class="card mb"><h3>⚠️ صافي الربح: غير متاح</h3>
+      <ul class="small">${d.net_profit.reasons_ar.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <div class="small mt"><b>المعروض بدلاً منه:</b> ${esc(d.net_profit.shown_instead_ar)}</div></div>
+    <div class="card mb"><table class="t" id="kpiTable"><tr><th>المؤشر</th><th>${esc(periodName(A))}</th><th>${esc(periodName(B))}</th><th>التغير</th><th>النسبة</th></tr>
+      ${KPIS.map((x) => `<tr ${x.drill ? `class="clk" style="cursor:pointer" onclick="Exec.drill('${x.k}')" title="اعرض الفواتير"` : ""}>
+        <td>${esc(x.l)}${x.drill ? ` <span class="muted small">↗</span>` : ""}</td><td>${fmtMoney(A[x.k])}</td><td>${fmtMoney(B[x.k])}</td>
+        <td>${fmtMoney(d.change[x.k]?.abs)}</td><td>${pctTxt(d.change[x.k])}</td></tr>`).join("")}
+      <tr><td class="muted">عدد الفواتير (صادرة / واردة)</td><td>${fmtNum(A.revenue_count)} / ${fmtNum(A.supplier_count)}</td><td>${fmtNum(B.revenue_count)} / ${fmtNum(B.supplier_count)}</td><td></td><td></td></tr></table>
+      <div class="muted small mt">النسبة "—" تعني أن قيمة فترة المقارنة صفر، فالنسبة غير معرّفة. اضغط على أي مؤشر لعرض الفواتير التي يتكون منها.</div></div>
+    <div class="card mb"><h3>الرسم البياني</h3>${barChart(d)}</div>
+    <div class="grid g2 mb">${["a", "b"].map((k) => `<div class="card"><h3>أكبر العملاء: ${esc(periodName(d.periods[k]))}</h3>
+      ${d.periods[k].top_clients.length ? `<table class="t">${d.periods[k].top_clients.map((c) => `<tr><td>${esc(c.party || "بدون اسم")}</td><td>${fmtMoney(c.amount)}</td><td class="muted">${fmtNum(c.count)} فاتورة</td></tr>`).join("")}</table>` : `<div class="empty">لا يوجد</div>`}</div>`).join("")}</div>
+    <div class="grid g2 mb">${["a", "b"].map((k) => `<div class="card"><h3>حسب القسم: ${esc(periodName(d.periods[k]))}</h3>
+      ${d.periods[k].by_department.length ? `<table class="t"><tr><th>القسم</th><th>صادرة</th><th>واردة</th></tr>${d.periods[k].by_department.map((x) => `<tr><td>${esc(x.department || "بدون قسم")}</td><td>${fmtMoney(x.revenue)}</td><td>${fmtMoney(x.supplier)}</td></tr>`).join("")}</table>` : `<div class="empty">لا يوجد</div>`}</div>`).join("")}</div>
+    <div class="card mb"><h3>اكتمال البيانات</h3><ul class="small">
+      <li>فواتير بدون تاريخ استحقاق (لم تُحسب في أي فترة): <b>${fmtNum(d.excluded_no_due_date)}</b></li>
+      <li>تحليل ربحية المشاريع وأسباب التغير غير متاحة: الفواتير غير مربوطة بالمشاريع، ولا توجد تكاليف مسجلة.</li>
+      <li>التقرير يعرض ما تسمح به صلاحياتك فقط.</li></ul></div>
+    <div id="drill">${r.drill ? viewDrill() : ""}</div></div>`;
+}
+function viewDrill() {
+  const dr = S.report.drill;
+  return `<div class="card mb"><div class="row"><h3 class="sp">الفواتير: ${esc(dr.label)}</h3><button class="btn sm ghost noprint" onclick="Exec.closeDrill()">✕</button></div>
+    ${dr.loading ? `<span class="spin"></span>` : `<div class="muted small mb">${fmtNum(dr.total)} فاتورة · المجموع ${fmtMoney(dr.sum)}${dr.total > dr.rows.length ? ` · معروض أول ${fmtNum(dr.rows.length)}` : ""}</div>
+    <table class="t"><tr><th>الرقم</th><th>الجهة</th><th>المبلغ</th><th>الاستحقاق</th><th>الحالة</th></tr>
+    ${dr.rows.map((i) => `<tr class="clk" style="cursor:pointer" onclick="App.go('invoices');App.edit('invoices','${safeId(i.id)}')"><td>${esc(i.number)}</td><td>${esc(i.party || "")}</td><td>${fmtMoney(i.amount)}</td><td>${esc(i.due_date || "")}</td><td>${esc(i.status || "")}</td></tr>`).join("")}</table>`}</div>`;
+}
+const Exec = {
+  async run(id) {
+    const p = PROMPTS.find((x) => x.id === id); if (!p || p.kind === "unavailable") return;
+    if (p.kind === "view") return p.go();
+    const per = periodsFor(id, riyadhToday());
+    S.report = { loading:true, title:p.text, per, partial:!!per.a.partial }; renderView();
+    const { data, error } = await sb.rpc("report_profit_comparison", { a_from:per.a.from, a_to:per.a.to, b_from:per.b.from, b_to:per.b.to });
+    if (error) { S.report = { error:"تعذر حساب التقرير: " + (error.message.includes("NO_COMPANY") ? "لا توجد شركة مرتبطة بحسابك." : "حاول مرة ثانية."), title:p.text }; return renderView(); }
+    S.report = { data, title:p.text, per, partial:!!per.a.partial }; renderView();
+  },
+  back() { S.report = null; renderView(); },
+  async drill(k) {
+    const kpi = KPIS.find((x) => x.k === k); if (!kpi?.drill) return;
+    const r = S.report, per = r.per.a;
+    r.drill = { label:`${kpi.l} · ${periodName(per)}`, loading:true, rows:[], total:0, sum:0 }; renderView();
+    // the same filters the database used for this number, under the same permissions
+    let q = sb.from("invoices").select("id,number,party,amount,due_date,status", { count:"exact" }).eq("company_id", S.cid)
+      .eq("kind", kpi.drill.kind).gte("due_date", per.from).lte("due_date", per.to);
+    if (kpi.drill.paid === true) q = q.eq("status", "مدفوعة");
+    if (kpi.drill.paid === false) q = q.neq("status", "مدفوعة");
+    const { data, count, error } = await q.order("due_date").order("id").range(0, 199);
+    if (error) { r.drill = null; toast("خطأ: " + error.message); return renderView(); }
+    r.drill = { label:r.drill.label, loading:false, rows:data ?? [], total:count ?? 0, sum:(data ?? []).reduce((s, i) => s + Number(i.amount || 0), 0) };
+    renderView();
+    document.getElementById("drill")?.scrollIntoView({ behavior:"smooth" });
+  },
+  closeDrill() { S.report.drill = null; renderView(); },
+};
+window.Exec = Exec;
+window.__periodsFor = periodsFor;
 
 // ===== Governance: audit log, trash, WhatsApp review queue, AI usage =====
 const ENT_LABEL = { vehicles:"المركبات", invoices:"الفواتير", documents:"المستندات", legal_cases:"القضايا", projects:"المشاريع", requests:"الطلبات",

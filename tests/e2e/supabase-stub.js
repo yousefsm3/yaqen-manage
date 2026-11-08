@@ -17,6 +17,8 @@ class Query {
   eq(k, v) { this.filters.push(["eq", k, v]); return this; }
   neq(k, v) { this.filters.push(["neq", k, v]); return this; }
   in(k, v) { this.filters.push(["in", k, v]); return this; }
+  gte(k, v) { this.filters.push(["gte", k, v]); return this; }
+  lte(k, v) { this.filters.push(["lte", k, v]); return this; }
   is(k, v) { this.filters.push(["eq", k, v]); return this; }
   or(expr) { this.filters.push(["or", expr]); return this; }
   order() { return this; }
@@ -28,6 +30,8 @@ class Query {
     return this.filters.every(([op, k, v]) => {
       if (op === "eq") return r[k] === v;
       if (op === "neq") return r[k] !== v;
+      if (op === "gte") return r[k] != null && r[k] >= v;
+      if (op === "lte") return r[k] != null && r[k] <= v;
       if (op === "in") return v.includes(r[k]);
       if (op === "or") return k.split(",").some((part) => {
         const [col, , pat] = part.split(".");
