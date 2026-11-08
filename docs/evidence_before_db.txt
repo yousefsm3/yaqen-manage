@@ -1,24 +1,33 @@
-psql:/home/claude/yaqen-manage/tests/db/00_lib.sql:2: NOTICE:  schema "qa" does not exist, skipping
-FAIL | C1 | PERF invoices: full list 20,000 rows (report query) | 3655.0 ms
-FAIL | C1 | PERF invoices: page 1 (50 rows) | 3689.7 ms
-FAIL | C1 | PERF invoices: page 200 (offset 9,950) | 3488.4 ms
-FAIL | C1 | PERF invoices: server search "INV-1999" | 3873.4 ms
-FAIL | C1 | PERF invoices: exact count for pager | 3616.3 ms
-FAIL | C1 | PERF finance employee: invoices page 1 | 4158.6 ms
-FAIL | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 4341.7 ms
+FAIL | C1 | PERF invoices: full list 20,000 rows (report query) | 3656.9 ms
+FAIL | C1 | PERF invoices: page 1 (50 rows) | 3865.6 ms
+FAIL | C1 | PERF invoices: page 200 (offset 9,950) | 3598.5 ms
+FAIL | C1 | PERF invoices: server search "INV-1999" | 3710.8 ms
+FAIL | C1 | PERF invoices: exact count for pager | 3646.1 ms
+FAIL | C1 | PERF finance employee: invoices page 1 | 4348.8 ms
+FAIL | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 4303.1 ms
 FAIL | C3 | employee who picked Finance at sign-up reads finance invoice | got [1] expected [0]
-FAIL | C3 | employee who picked a department at sign-up has no department until admin assigns | got [efd7e983-574d-4624-8322-b0abcca418dc] expected [none]
+FAIL | C3 | employee who picked a department at sign-up has no department until admin assigns | got [7d0d312d-388e-4076-88eb-8b1a587e7faa] expected [none]
 FAIL | C3 | new join-code sign-up is pending admin approval | column "status" does not exist
 FAIL | C3 | pending employee sees own company data | got [7] expected [0]
 FAIL | C3 | admin code is single-use (rotated after the admin signed up) | admin_code still the original
 FAIL | C3 | lookup_company refuses after 30 failed guesses from one IP | still answering after 30 failures
 PASS | C3 | lookup_company still works for a normal user from another IP | 
 FAIL | C3 | lookup_company does not reveal department ids to anonymous callers | 
-FAIL | H2 | PERF dashboard: overdue invoices sum | 1459.2 ms
-FAIL | H2 | PERF vehicles: page 1 | 612.6 ms
-FAIL | H2 | PERF vehicles: full list 3,000 | 712.1 ms
-PASS | H2 | PERF employees: page 1 | 33.6 ms
-PASS | H2 | PERF employees: full list 1,500 | 33.9 ms
+PASS | C3 | employee cannot approve a pending member | 
+PASS | C3 | admin of another company cannot approve | 
+PASS | C3 | admin cannot assign a department of another company | 
+FAIL | C3 | approved Projects member still cannot read finance invoices | got [1] expected [0]
+FAIL | C3 | disabled member sees nothing | got [7] expected [0]
+PASS | C3 | admin cannot disable themself | 
+FAIL | C3 | member-facing my_account() works while pending/disabled | 
+FAIL | H2 | fleet employee dashboard does not reveal receivables of finance | got [BLOCKED: function public.dashboard_stats(unknown) does not exist] expected [0]
+FAIL | H2 | other company admin gets zeros for company A | got [BLOCKED: function public.dashboard_stats(unknown) does not exist] expected [0/0]
+FAIL | H2 | company_alerts returns the expiring document | 
+FAIL | H2 | PERF dashboard: overdue invoices sum | 1410.6 ms
+FAIL | H2 | PERF vehicles: page 1 | 512.7 ms
+FAIL | H2 | PERF vehicles: full list 3,000 | 488.9 ms
+PASS | H2 | PERF employees: page 1 | 32.3 ms
+PASS | H2 | PERF employees: full list 1,500 | 32.9 ms
 FAIL | H3 | created_by cannot be spoofed on insert | got [00000000-0000-0000-0000-0000000000a1] expected [00000000-0000-0000-0000-0000000000a2]
 FAIL | H3 | audit log records the insert with the real actor | relation "audit_log" does not exist
 FAIL | H3 | audit log records the update with before/after | relation "audit_log" does not exist
@@ -27,21 +36,43 @@ FAIL | H3 | company admin cannot delete the audit log |
 FAIL | H3 | company admin sees only own company audit rows | got [BLOCKED: relation "audit_log" does not exist] expected [0]
 FAIL | H3 | company admin sees own company audit rows | 
 FAIL | H4 | AI usage is metered per company with a limit check | 
+FAIL | H4 | ai_company_context returns totals + alerts in one call | 
+PASS | H4 | authenticated users cannot write AI usage records | 
+FAIL | H4 | employee cannot read company AI spend | got [BLOCKED: relation "ai_usage" does not exist] expected [0]
 FAIL | H6 | expiring document creates a notification for company admins | relation "notifications" does not exist
 FAIL | H6 | notifications exist and are private to their user | 
+FAIL | H6 | user can mark own notification read | 
+PASS | H6 | user cannot rewrite notification text | 
+PASS | H7 | sender matching is not callable from the browser | 
+FAIL | H7 | queued WhatsApp messages visible to company admin only | got [BLOCKED: relation "wa_inbound" does not exist/BLOCKED: relation "wa_inbound" does not exist/BLOCKED: rela
 FAIL | L1 | anon lists avatar file names | got [1] expected [0]
 FAIL | L2 | service/maintenance context can deactivate a company | got [true] expected [false]
 FAIL | M1 | room member overwrites translation of another user message | 1
 FAIL | M2 | duplicate plate in same company (spacing/case differs) | 1
 FAIL | M2 | duplicate outgoing invoice number in same company | 1
 PASS | M2 | same incoming invoice number from two different suppliers is allowed | 2
-FAIL | M4 | new company codes come from a CSPRNG (join >= 12, admin >= 16 chars) | 90226C / EBC30EE831
+FAIL | M4 | company admin can rotate the join code but not see/rotate the admin code | 
+PASS | M4 | company admin cannot rotate the admin code | 
+PASS | M5 | MFA off: admin with password-only session keeps admin access | true
+FAIL | M5 | company admin cannot switch the MFA requirement | got [BLOCKED: column "require_admin_mfa" does not exist] expected [false]
+FAIL | M5 | MFA on: password-only (aal1) admin loses admin powers | got [true] expected [false]
+FAIL | M5 | MFA on: aal1 admin cannot read other departments' invoices | got [1] expected [0]
+PASS | M5 | MFA on: admin after TOTP (aal2) has admin powers | true
+FAIL | M5 | my_account tells the UI to ask for the code | got [BLOCKED: function public.my_account() does not exist] expected [true/aal1]
+PASS | M5 | employees are not affected by the admin MFA rule | true
 FAIL | M6 | deleted record is hidden from the app | got [1] expected [0]
 FAIL | M6 | deleted record still exists in the database (recoverable) | column "deleted_at" does not exist
 FAIL | M6 | restore brings the record back | 
 FAIL | M6 | hard DELETE through the API is refused for company admins | 1
 FAIL | M6 | employee cannot soft-delete | 
+PASS | M6 | soft-deleted company: its employees see nothing | 0
+FAIL | M6 | soft-deleted company data still exists | 
+FAIL | M6 | restored company works again | got [0] expected [1]
+PASS | M6 | purge cannot be called from the API | 
 FAIL | M7 | no e-mail address hard-coded in sign-up trigger | 
+PASS | M7 | platform admin invite: only the owner can invite | 
+FAIL | MON | only the platform owner can read system events | got [BLOCKED: relation "system_events" does not exist] expected [0]
+FAIL | MON | health() answers anonymously | got [BLOCKED: function public.health() does not exist] expected [true]
 PASS | MT | B employee reads company A vehicle | 0
 PASS | MT | B employee reads A invoices/profiles/rooms/messages | 0/0/0/0
 PASS | MT | B employee inserts vehicle into A | BLOCKED: new row violates row-level security policy for table "vehicles"
@@ -64,4 +95,4 @@ PASS | PERM | A driver promotes self to admin | employee
 PASS | PERM | A driver creates department | BLOCKED: new row violates row-level security policy for table "departments"
 PASS | PERM | A driver marks manager note done / edits manager text | مفتوحة|جدد التأمين
 PASS | PERM | A driver deletes admin message | 0
----- 26 passed, 39 failed of 65
+---- 40 passed, 57 failed of 97

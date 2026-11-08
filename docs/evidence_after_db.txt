@@ -1,41 +1,10 @@
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "companies_audit" for relation "public.companies" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "departments_audit" for relation "public.departments" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "profiles_audit" for relation "public.profiles" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "vehicles_audit" for relation "public.vehicles" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "projects_audit" for relation "public.projects" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "legal_cases_audit" for relation "public.legal_cases" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "invoices_audit" for relation "public.invoices" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "documents_audit" for relation "public.documents" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "requests_audit" for relation "public.requests" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "manager_notes_audit" for relation "public.manager_notes" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "rooms_audit" for relation "public.rooms" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "room_members_audit" for relation "public.room_members" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "room_messages_audit" for relation "public.room_messages" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "vehicles_created_by" for relation "public.vehicles" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "projects_created_by" for relation "public.projects" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "legal_cases_created_by" for relation "public.legal_cases" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "invoices_created_by" for relation "public.invoices" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "documents_created_by" for relation "public.documents" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "requests_created_by" for relation "public.requests" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "manager_notes_created_by" for relation "public.manager_notes" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108020000_audit_log.sql:90: NOTICE:  trigger "rooms_created_by" for relation "public.rooms" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:13: NOTICE:  policy "manager_notes_del" for relation "public.manager_notes" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:30: NOTICE:  trigger "vehicles_guard_soft_delete" for relation "public.vehicles" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:30: NOTICE:  trigger "projects_guard_soft_delete" for relation "public.projects" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:30: NOTICE:  trigger "legal_cases_guard_soft_delete" for relation "public.legal_cases" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:30: NOTICE:  trigger "invoices_guard_soft_delete" for relation "public.invoices" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:30: NOTICE:  trigger "documents_guard_soft_delete" for relation "public.documents" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:30: NOTICE:  trigger "requests_guard_soft_delete" for relation "public.requests" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108030000_soft_delete_uniques.sql:30: NOTICE:  trigger "manager_notes_guard_soft_delete" for relation "public.manager_notes" does not exist, skipping
-psql:/home/claude/yaqen-manage/supabase/migrations/20261108060000_ai_usage_notifications_monitoring.sql:157: NOTICE:  pg_cron not available: schedule generate_notifications / purge_deleted externally
-psql:/home/claude/yaqen-manage/tests/db/00_lib.sql:2: NOTICE:  schema "qa" does not exist, skipping
-PASS | C1 | PERF invoices: full list 20,000 rows (report query) | 10.5 ms
-PASS | C1 | PERF invoices: page 1 (50 rows) | 0.9 ms
-PASS | C1 | PERF invoices: page 200 (offset 9,950) | 15.2 ms
-PASS | C1 | PERF invoices: server search "INV-1999" | 8.9 ms
-PASS | C1 | PERF invoices: exact count for pager | 4.2 ms
+PASS | C1 | PERF invoices: full list 20,000 rows (report query) | 8.3 ms
+PASS | C1 | PERF invoices: page 1 (50 rows) | 0.5 ms
+PASS | C1 | PERF invoices: page 200 (offset 9,950) | 14.5 ms
+PASS | C1 | PERF invoices: server search "INV-1999" | 8.8 ms
+PASS | C1 | PERF invoices: exact count for pager | 6.5 ms
 PASS | C1 | PERF finance employee: invoices page 1 | 0.6 ms
-PASS | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 6.4 ms
+PASS | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 6.5 ms
 PASS | C3 | employee who picked Finance at sign-up reads finance invoice | 0
 PASS | C3 | employee who picked a department at sign-up has no department until admin assigns | none
 PASS | C3 | new join-code sign-up is pending admin approval | 
@@ -57,12 +26,12 @@ PASS | H2 | admin dashboard_stats counts all company vehicles | 2
 PASS | H2 | fleet employee dashboard does not reveal receivables of finance | 0
 PASS | H2 | other company admin gets zeros for company A | 0/0
 PASS | H2 | company_alerts returns the expiring document | 
-PASS | H2 | PERF dashboard: overdue invoices sum | 3.8 ms
-PASS | H2 | PERF vehicles: page 1 | 0.5 ms
-PASS | H2 | PERF vehicles: full list 3,000 | 1.3 ms
+PASS | H2 | PERF dashboard: overdue invoices sum | 3.7 ms
+PASS | H2 | PERF vehicles: page 1 | 0.6 ms
+PASS | H2 | PERF vehicles: full list 3,000 | 1.4 ms
 PASS | H2 | PERF employees: page 1 | 0.5 ms
-PASS | H2 | PERF employees: full list 1,500 | 1.3 ms
-PASS | H2 | PERF dashboard: dashboard_stats() RPC | 11.9 ms
+PASS | H2 | PERF employees: full list 1,500 | 1.1 ms
+PASS | H2 | PERF dashboard: dashboard_stats() RPC | 12.3 ms
 PASS | H3 | created_by cannot be spoofed on insert | 00000000-0000-0000-0000-0000000000a2
 PASS | H3 | audit log records the insert with the real actor | 
 PASS | H3 | audit log records the update with before/after | 
@@ -92,9 +61,17 @@ PASS | M1 | room member overwrites translation of another user message | BLOCKED
 PASS | M2 | duplicate plate in same company (spacing/case differs) | BLOCKED: duplicate key value violates unique constraint "vehicles_company_plate_uniq"
 PASS | M2 | duplicate outgoing invoice number in same company | BLOCKED: duplicate key value violates unique constraint "invoices_company_out_number_uniq"
 PASS | M2 | same incoming invoice number from two different suppliers is allowed | 2
-PASS | M4 | new company codes come from a CSPRNG (join >= 12, admin >= 16 chars) | S5V8W434HL8Z / ZKGJXWASTD3J4K5A
+PASS | M4 | new company codes come from a CSPRNG (join >= 12, admin >= 16 chars) | FW5Y6SS8J5BQ / 9FLLJR8A7WPHVBLG
 PASS | M4 | company admin can rotate the join code but not see/rotate the admin code | 
 PASS | M4 | company admin cannot rotate the admin code | 
+PASS | M5 | MFA off: admin with password-only session keeps admin access | true
+PASS | M5 | company admin cannot switch the MFA requirement | false
+PASS | M5 | platform owner can require MFA | true
+PASS | M5 | MFA on: password-only (aal1) admin loses admin powers | false
+PASS | M5 | MFA on: aal1 admin cannot read other departments' invoices | 0
+PASS | M5 | MFA on: admin after TOTP (aal2) has admin powers | true
+PASS | M5 | my_account tells the UI to ask for the code | true/aal1
+PASS | M5 | employees are not affected by the admin MFA rule | true
 PASS | M6 | deleted record is hidden from the app | 0
 PASS | M6 | deleted record still exists in the database (recoverable) | 
 PASS | M6 | restore brings the record back | 
@@ -134,4 +111,4 @@ PASS | PERM | A driver promotes self to admin | employee
 PASS | PERM | A driver creates department | BLOCKED: new row violates row-level security policy for table "departments"
 PASS | PERM | A driver marks manager note done / edits manager text | مفتوحة|جدد التأمين
 PASS | PERM | A driver deletes admin message | 0
----- 105 passed, 0 failed of 105
+---- 113 passed, 0 failed of 113
