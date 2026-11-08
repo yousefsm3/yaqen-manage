@@ -7,7 +7,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PGPORT="${PGPORT:-54329}"
 PG="psql -h localhost -p $PGPORT -U postgres -d ${DB:-yaqen_staging} -q -X"
-[ -z "${NORESET:-}" ] && { "$ROOT/staging/reset.sh" >/dev/null || { echo "MIGRATIONS FAILED"; exit 2; }; }
+[ -z "${NORESET:-}" ] && { "$ROOT/staging/reset.sh" >/dev/null 2>"$ROOT/.reset_errors.log" || { echo "MIGRATIONS FAILED"; grep -v NOTICE "$ROOT/.reset_errors.log" | tail -20; exit 2; }; }
 $PG -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/00_lib.sql" >/dev/null
 $PG -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/01_fixture.sql" >/dev/null || { echo "FIXTURE FAILED"; exit 2; }
 $PG -f "$ROOT/tests/db/10_security.sql" >/dev/null 2>"$ROOT/.test_errors.log"

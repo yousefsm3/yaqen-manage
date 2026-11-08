@@ -6,8 +6,8 @@ PGPORT="${PGPORT:-54329}"
 PG="psql -h localhost -p $PGPORT -U postgres -v ON_ERROR_STOP=1 -q"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DB="${DB:-yaqen_staging}"
-$PG -d postgres -c "drop database if exists $DB" -c "create database $DB" 2>/dev/null
-$PG -d "$DB" -f "$ROOT/staging/supabase_stubs.sql" 2>/dev/null
+$PG -d postgres -c "drop database if exists $DB" -c "create database $DB" 2>&1 | grep -v NOTICE >&2 || true
+$PG -d "$DB" -f "$ROOT/staging/supabase_stubs.sql" 2>&1 | grep -v -E "NOTICE|already exists" >&2 || true
 for f in "$ROOT"/supabase/migrations/*.sql; do
   v="$(basename "$f" | cut -d_ -f1)"
   $PG -d "$DB" -f "$f"

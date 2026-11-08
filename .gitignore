@@ -1,3 +1,4 @@
 .test_errors.log
 .test_errors.log
 node_modules/
+.reset_errors.log
