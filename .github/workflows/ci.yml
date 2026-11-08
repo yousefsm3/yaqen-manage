@@ -18,6 +18,8 @@ jobs:
     env: { PGPASSWORD: postgres, PGPORT: "54329" }
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
       - name: Postgres 17 client (pg_dump must match the server version)
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -27,6 +29,8 @@ jobs:
           echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
       - name: Migrations + security/permission/multi-tenancy + performance tests
         run: tests/run_db_tests.sh
+      - name: MCP connector end-to-end (core + staging DB)
+        run: node --experimental-strip-types --test tests/mcp/mcp.test.mjs
       - name: Every migration rolls back and re-applies
         run: staging/test_rollback.sh
       - name: Backup and restore are verifiable
