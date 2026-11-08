@@ -1,0 +1,18 @@
+PASS | demo opens on the login screen with the demo bar
+PASS | admin sees the dashboard
+PASS | brief is clearly labelled as illustrative
+PASS | invoices paged (50 of 148)
+PASS | pending approvals shown (2)
+PASS | approving a member works
+PASS | soft delete lands in trash (2 items)
+PASS | audit log records the actions
+PASS | room shows the Urdu message with its stored translation
+PASS | sending a room message works
+PASS | fleet employee sees no invoices (department scoping)
+PASS | fleet employee sees fleet vehicles
+PASS | signed in as the fleet employee
+PASS | platform owner sees 3 demo companies
+PASS | sign-up with the demo code creates a pending account
+PASS | no JS errors
+PASS | no network requests except Google Fonts
+---- 17 passed, 0 failed of 17
