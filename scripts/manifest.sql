@@ -14,4 +14,6 @@ union all select 'objects|rls_enabled_tables|' || count(*) from pg_class c join 
 union all select 'objects|api_table_grants|' || count(*) from information_schema.role_table_grants where table_schema = 'public' and grantee in ('anon', 'authenticated', 'service_role')
 union all select 'objects|api_function_grants|' || count(*) from information_schema.role_routine_grants where routine_schema = 'public' and grantee in ('anon', 'authenticated', 'service_role')
 union all select 'objects|schema_usage|' || string_agg(r, ',' order by r) from unnest(array['anon', 'authenticated', 'service_role']) r where has_schema_privilege(r, 'public', 'USAGE')
+union all select 'objects|auth_users|' || coalesce((xpath('/row/c/text()', query_to_xml('select count(*) as c from auth.users', false, true, '')))[1]::text, '-') where to_regclass('auth.users') is not null
+union all select 'objects|storage_objects|' || coalesce((xpath('/row/c/text()', query_to_xml('select count(*) as c from storage.objects', false, true, '')))[1]::text, '-') where to_regclass('storage.objects') is not null
 order by 1;

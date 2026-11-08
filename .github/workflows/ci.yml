@@ -32,9 +32,9 @@ jobs:
       - name: Backup and restore are verifiable
         run: |
           createdb -h localhost -U postgres yaqen_restore
-          psql -h localhost -U postgres -d yaqen_restore -q -f staging/supabase_stubs.sql
+          psql -h localhost -U postgres -d yaqen_restore -q -v ON_ERROR_STOP=1 -f scripts/prepare_restore_target.sql   # same preparation as the nightly drill
           INCLUDE_AUTH=1 DATABASE_URL=postgres://postgres:postgres@localhost:54329/yaqen_staging BACKUP_PASSPHRASE=ci-only scripts/backup.sh /tmp/bk
-          TARGET_URL=postgres://postgres:postgres@localhost:54329/yaqen_restore BACKUP_PASSPHRASE=ci-only scripts/restore.sh /tmp/bk/*.dump.gpg
+          CREATE_MISSING_ROLES=1 TARGET_URL=postgres://postgres:postgres@localhost:54329/yaqen_restore BACKUP_PASSPHRASE=ci-only scripts/restore.sh /tmp/bk/*.dump.gpg
   web:
     runs-on: ubuntu-24.04
     steps:

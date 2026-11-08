@@ -17,6 +17,15 @@ if [ -f "$BASE.sha256" ] && [ "$(sha256sum "$DUMP" | cut -d' ' -f1)" != "$(cat "
   echo "CHECKSUM MISMATCH: backup file is damaged" >&2; exit 3
 fi
 
+# Roles named in GRANTs that the target does not have would abort the restore. CREATE_MISSING_ROLES=1 (drill only)
+# creates them as NOLOGIN placeholders so the privileges can be restored and compared.
+if [ "${CREATE_MISSING_ROLES:-}" = "1" ]; then
+  for r in $(pg_restore -f - "$DUMP" | grep -oE '^(GRANT|REVOKE) .* (TO|FROM) [^;]+' | sed -E 's/.* (TO|FROM) //; s/ WITH GRANT OPTION//' | tr ',' '\n' | tr -d ' "' | sort -u); do
+    [ "$r" = "PUBLIC" ] && continue
+    psql "$TARGET_URL" -X -q -v ON_ERROR_STOP=1 -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname = '$r') then create role \"$r\" nologin; end if; end \$\$"
+  done
+fi
+
 # --clean drops the target's copies of the dumped objects first; any real error aborts (exit-on-error).
 # (A restore that stops half-way can still have all the rows but miss constraints/policies: the manifest
 #  below also compares those object counts, so that case fails instead of looking green.)
