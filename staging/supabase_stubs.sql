@@ -22,6 +22,19 @@ create table if not exists auth.users (
   email_confirmed_at timestamptz,
   created_at timestamptz default now()
 );
+-- mirrors the columns of the real auth.sessions that the app reads (id, user_id, not_after)
+create table if not exists auth.sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  not_after timestamptz,
+  oauth_client_id uuid,
+  scopes text
+);
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'authenticator') then create role authenticator noinherit; end if;
+end $$;
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub', '')::uuid $$;
 create or replace function auth.jwt() returns jsonb language sql stable as $$
