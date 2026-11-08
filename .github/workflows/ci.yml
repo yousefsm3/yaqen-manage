@@ -47,3 +47,5 @@ jobs:
         run: |
           npm i --no-save playwright@1
           node tests/e2e/run.mjs
+      - name: Demo build works (fictional data, no network)
+        run: node scripts/build_demo.mjs && node tests/e2e/demo_check.mjs

@@ -4,7 +4,8 @@
 
 | الملف | محتواه |
 |---|---|
-| [REPORT_7_PRODUCTION_READINESS.md](REPORT_7_PRODUCTION_READINESS.md) | **الحكم النهائي، وما المطلوب منك** |
+| [PRE_REVENUE_PLAN.md](PRE_REVENUE_PLAN.md) | **خطة ما قبل العقود: المجاني، وما لا يُؤجَّل، وتكلفة أول شركتين** |
+| [REPORT_7_PRODUCTION_READINESS.md](REPORT_7_PRODUCTION_READINESS.md) | الحكم النهائي، وما المطلوب منك |
 | [ISSUES_TRACKER.md](ISSUES_TRACKER.md) | المشكلات الـ 21، كل واحدة بالحقول العشرة |
 | [REPORT_1_CODE_CHANGES.md](REPORT_1_CODE_CHANGES.md) | تغييرات الكود |
 | [REPORT_2_TESTS.md](REPORT_2_TESTS.md) | الاختبارات وما لم يُختبر |
