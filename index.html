@@ -1127,7 +1127,7 @@ function viewTrash() {
         <td class="small">${fmtDate(r.deleted_at)}<div class="muted">${esc(S.people.find((p) => p.id === r.deleted_by)?.full_name || "")}</div></td>
         <td style="text-align:left"><button class="btn sm" onclick="Gov.restore('${esc(r.entity)}','${safeId(r.id)}')">↺ استرجاع</button></td></tr>`).join("")}</table>`}</div>`;
 }
-const WA_STATUS = { new:"جديدة", matched:"مطابقة لموظف", unmatched:"رقم غير معروف", converted:"تم تحويلها", rejected:"مرفوضة" };
+const WA_STATUS = { needs_review:"بانتظار المراجعة", unmatched:"رقم غير معروف", converted:"تمت المعالجة", rejected:"مرفوضة" };
 function viewWhatsApp() {
   const rows = S.wa;
   return `<div class="msg mb">💬 الرسائل الواردة من الواتساب تنتظر هنا مراجعتك قبل ما تدخل في بيانات الشركة. الربط الفعلي مع واتساب يحتاج حساب WhatsApp Business من Meta (لم يُفعّل بعد).</div>
@@ -1137,7 +1137,7 @@ function viewWhatsApp() {
           <span class="badge">${esc(WA_STATUS[m.status] || m.status)}</span></div>
         <div class="muted small">${fmtDate(m.received_at)} · ${esc(m.msg_type)}</div>
         ${m.body ? `<div class="mt">${esc(m.body)}</div>` : ""}${m.transcript ? `<div class="mt muted">🎤 ${esc(m.transcript)}</div>` : ""}
-        ${["new", "matched", "unmatched"].includes(m.status) ? `<div class="row mt">
+        ${["needs_review", "unmatched"].includes(m.status) ? `<div class="row mt">
           <button class="btn sm pri" onclick="Gov.waDecide('${safeId(m.id)}','converted')">✓ تمت المعالجة</button>
           <button class="btn sm danger" onclick="Gov.waDecide('${safeId(m.id)}','rejected')">رفض</button></div>` : ""}
       </div>`).join("")}</div>`;
@@ -1534,7 +1534,7 @@ window.App = {
   async draftReply(id) {
     const n = (S.notes ?? []).find((x) => x.id === id), b = $("#draftBtn"); if (!n) return;
     b.disabled = true; b.innerHTML = `<span class="spin"></span>`;
-    try { const { text } = await ai({ mode:"note_reply", note:(n.subject ? n.subject + ": " : "") + n.body }); $("#replyTxt").value = text; }
+    try { const { text } = await ai({ mode:"note_reply", note_id:n.id }); $("#replyTxt").value = text; }
     catch (err) { toast(err.message); }
     b.disabled = false; b.innerHTML = "✨ اقترح رد";
   },

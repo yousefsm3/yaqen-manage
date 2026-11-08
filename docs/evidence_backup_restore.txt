@@ -1,0 +1,49 @@
+# Backup/restore test on local staging, 2026-11-08T17:15:15Z
+# source: yaqen_staging after the full test suite (52 companies, 1,508 profiles, 69,003 invoices, 12,803 vehicles)
+$ INCLUDE_AUTH=1 BACKUP_PASSPHRASE=*** scripts/backup.sh
+encrypted: /tmp/bk/yaqen-20261108T171516Z.dump.gpg
+manifest: /tmp/bk/yaqen-20261108T171516Z.manifest (20 tables)
+backup seconds: 1.658323646
+ 
+5066319 yaqen-20261108T171516Z.dump.gpg
+1329 yaqen-20261108T171516Z.manifest
+65 yaqen-20261108T171516Z.sha256
+$ scripts/restore.sh (into empty DB yaqen_restore)
+gpg: AES256.CFB encrypted data
+gpg: encrypted with 1 passphrase
+RESTORE VERIFIED: 20 tables (rows + checksums) and 9 object counts match
+restore+verify seconds: 3.091106137
+--- manifest (source)
+objects|api_function_grants|42
+objects|api_table_grants|171
+objects|constraints|93
+objects|functions|61
+objects|indexes|89
+objects|policies|53
+objects|rls_enabled_tables|20
+objects|schema_usage|anon,authenticated,service_role
+objects|triggers|44
+table|ai_usage|3|cf9bc72cb9b69717e51d589bc8d1d52c
+table|audit_log|87075|8ad4892c283ef08654a7b7f5e56c433a
+table|code_lookup_attempts|32|dcdc915b4968ae93ac4992279494ec30
+table|companies|52|4d34af7e448059fbf8765bb523c6a831
+table|departments|364|5aebac5343426c1ddadf7d3b5e2014b4
+table|documents|3001|acf6636e00877cbb238dc0721121ae94
+table|invoices|69003|58bd0798acc5e679d932163cbda0c648
+table|legal_cases|0|d41d8cd98f00b204e9800998ecf8427e
+table|manager_notes|1|5886f5e4e43c3b0a602965fbb658582b
+table|notifications|1|4bbaac37daab3c37f513b30f33c7e1ef
+table|platform_admin_invites|0|d41d8cd98f00b204e9800998ecf8427e
+table|profiles|1508|879ad4dc023e829e59967c930eac3be7
+table|projects|300|c498e4ba3b60e47d38e802dd679e72f0
+table|requests|0|d41d8cd98f00b204e9800998ecf8427e
+table|room_members|2|dae98738919e2c7237fcf3cdb2928e76
+table|room_messages|1|4165c37662fb6eecabf6aa14e64657a6
+table|rooms|1|666c7127240195e8f216c6b4e6da9496
+table|system_events|30|a242d823de0506470a2bb0611aaa4774
+table|vehicles|12803|6e1e0a460c13ede85baedf546252740e
+table|wa_inbound|1|41422366c5994e522496fac8f41714c8
+--- tamper test: wrong passphrase
+exit code: 2 (non-zero expected)
+--- tamper test: data changed after restore -> verification must fail
+diff exit code: 1 (1 = difference detected, expected)

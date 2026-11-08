@@ -1,0 +1,44 @@
+# Nightly encrypted logical backup of PRODUCTION (read-only: pg_dump never writes).
+# Inactive until the owner adds two repository secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_URL      the "Session pooler" connection string (GitHub runners have no IPv6 for the direct host)
+#   BACKUP_PASSPHRASE    long random passphrase, kept OUTSIDE GitHub as well (without it the backup is useless)
+# The encrypted file is kept as a workflow artifact for 14 days. The repository is public: artifacts of public
+# repos can be downloaded by GitHub users, which is why encryption is mandatory here. Moving the repo to private
+# and/or sending backups to separate storage (e.g. S3 in the Middle East region) is an owner decision (docs).
+name: Nightly backup
+on:
+  schedule: [{ cron: "17 23 * * *" }]     # 02:17 Riyadh
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        id: s
+        run: |
+          if [ -z "${{ secrets.SUPABASE_DB_URL }}" ] || [ -z "${{ secrets.BACKUP_PASSPHRASE }}" ]; then
+            echo "Backup secrets not configured - skipping (see docs/RUNBOOK.md)"; echo "ok=false" >> "$GITHUB_OUTPUT"
+          else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Postgres 17 client
+        if: steps.s.outputs.ok == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+      - name: Dump (encrypted)
+        if: steps.s.outputs.ok == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          INCLUDE_AUTH: "1"
+        run: PATH=/usr/lib/postgresql/17/bin:$PATH scripts/backup.sh backups && ls -l backups && test -z "$(ls backups/*.dump 2>/dev/null)"
+      - uses: actions/upload-artifact@v4
+        if: steps.s.outputs.ok == 'true'
+        with:
+          name: yaqen-backup-${{ github.run_id }}
+          path: backups/
+          retention-days: 14

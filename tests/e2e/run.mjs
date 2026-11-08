@@ -41,7 +41,7 @@ function baseScenario(over = {}) {
       notifications:[{ id:1, user_id:ADMIN, company_id:CID, kind:"due", title:X, body:X, entity:"invoices", entity_id:uuid(5000), created_at:"2026-11-07", read_at:null }],
       invoices, vehicles:[], documents:[], legal_cases:[], requests:[],
       audit_log:[{ id:1, company_id:CID, at:"2026-11-07T10:00:00Z", actor:ADMIN, source:"web", action:"update", entity:"invoices", entity_id:uuid(5000), before:{ party:"a" }, after:{ party:X } }],
-      wa_inbound:[{ id:uuid(0xf1), company_id:CID, profile_id:uuid(0xa2), from_phone:"966501234567", msg_type:"text", body:X, transcript:X, status:"matched", received_at:"2026-11-07" }],
+      wa_inbound:[{ id:uuid(0xf1), company_id:CID, profile_id:uuid(0xa2), from_phone:"966501234567", msg_type:"text", body:X, transcript:X, status:"needs_review", received_at:"2026-11-07" }],
     },
     rpc:{
       my_account:{ id:ADMIN, status:"active", role:"admin", company_id:CID, company_name:"QA", company_active:true, mfa_required:false, aal:"aal1" },
