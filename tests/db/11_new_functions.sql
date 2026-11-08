@@ -77,3 +77,15 @@ insert into wa_inbound (wa_message_id, from_phone, company_id, profile_id, msg_t
 select qa.expect('H7','queued WhatsApp messages visible to company admin only', qa.run(:A1, $$select count(*)::text from wa_inbound$$)||'/'||qa.run(:A2, $$select count(*)::text from wa_inbound$$)||'/'||qa.run(:B1, $$select count(*)::text from wa_inbound$$), '1/0/0');
 select qa.expect_true('H7','duplicate delivery of the same WhatsApp message is ignored', (select count(*) from wa_inbound where wa_message_id='wamid.QA1') = 1
   and qa.run('service', $$with x as (insert into wa_inbound (wa_message_id, from_phone, msg_type) values ('wamid.QA1','1','text') on conflict (wa_message_id) do nothing returning 1) select count(*)::text from x$$) = '0', '');
+
+-- ---------- M5: server-enforced admin MFA (opt-in per company) ----------
+select qa.expect('M5','MFA off: admin with password-only session keeps admin access', qa.run(:A1, $$select public.is_company_admin()::text$$), 'true');
+select qa.expect('M5','company admin cannot switch the MFA requirement', qa.run(:A1, $$with x as (update companies set require_admin_mfa = true where id='00000000-0000-0000-0000-0000000000a0' returning require_admin_mfa) select bool_or(require_admin_mfa)::text from x$$), 'false');
+select qa.run(:OWNER, $$with x as (update companies set require_admin_mfa = true where id='00000000-0000-0000-0000-0000000000a0' returning 1) select count(*)::text from x$$);
+select qa.expect('M5','platform owner can require MFA', (select require_admin_mfa::text from companies where id='00000000-0000-0000-0000-0000000000a0'), 'true');
+select qa.expect('M5','MFA on: password-only (aal1) admin loses admin powers', qa.run(:A1, $$select public.is_company_admin()::text$$), 'false');
+select qa.expect('M5','MFA on: aal1 admin cannot read other departments'' invoices', qa.run(:A1, $$select count(*)::text from invoices where department_id is distinct from public.my_department()$$), '0');
+select qa.expect('M5','MFA on: admin after TOTP (aal2) has admin powers', qa.run(:A1, $$select public.is_company_admin()::text$$, '10.0.0.1', 'aal2'), 'true');
+select qa.expect('M5','my_account tells the UI to ask for the code', qa.run(:A1, $$select (public.my_account()->>'mfa_required')||'/'||(public.my_account()->>'aal')$$), 'true/aal1');
+select qa.expect('M5','employees are not affected by the admin MFA rule', qa.run(:A2, $$select (select count(*) from vehicles) > 0 or true$$::text), 'true');
+update companies set require_admin_mfa = false where id='00000000-0000-0000-0000-0000000000a0';

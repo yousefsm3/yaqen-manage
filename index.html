@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B1220">
+<!-- H1 defence in depth: scripts only from this site + the supabase-js CDN; network only to our Supabase project.
+     Even if some text were ever interpreted as code, it could not send data anywhere else. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://zalfumkzlnpygvemxayb.supabase.co; media-src 'self' blob: https://zalfumkzlnpygvemxayb.supabase.co; connect-src https://zalfumkzlnpygvemxayb.supabase.co wss://zalfumkzlnpygvemxayb.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>منصة الشركة | يقين</title>
@@ -209,6 +213,19 @@ const SUPABASE_URL = "https://zalfumkzlnpygvemxayb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_IeygDMV4GdMRU4it2FfJ9A_WqP0Al09";
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ===== Error monitoring: browser errors are recorded (rate-limited server-side) in public.system_events =====
+let lastErr = "";
+function reportError(msg, ctx) {
+  try {
+    const m = String(msg || "").slice(0, 500);
+    if (!m || m === lastErr || !S.session) return;
+    lastErr = m;
+    sb.rpc("log_client_error", { msg:m, ctx:{ view:S.view, ...ctx } }).then(() => {}, () => {});
+  } catch {}
+}
+window.addEventListener("error", (e) => reportError(e.message, { src:e.filename, line:e.lineno }));
+window.addEventListener("unhandledrejection", (e) => reportError(e.reason?.message || String(e.reason), { kind:"promise" }));
+
 const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const fmtNum = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString("ar-SA"));
@@ -216,9 +233,10 @@ const fmtSAR = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString("a
 const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
 const daysLeft = (d) => (d ? Math.round((new Date(d) - today()) / 86400000) : null);
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-SA-u-ca-gregory", { year:"numeric", month:"short", day:"numeric" }) : "-");
+// H1 rule: inside inline event handlers only validated ids or fixed keys may appear, never free text.
+const safeId = (x) => (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(x ?? "")) ? String(x) : "");
 const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("");
 
-const OWNER_EMAIL = "yyssmmrr2@gmail.com";
 const S = { session:null, me:null, company:null, cid:null, companies:[], allPeople:[], settings:{ company_name:"يقين للأعمال" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login", signupCo:null, urls:{}, rooms:[], roomMembers:[] };
 const isSuper = () => S.me?.role === "super_admin";
 const isAdmin = () => S.me?.role === "admin" || isSuper();
@@ -227,7 +245,7 @@ const depByName = (n) => S.deps.find((d) => d.name === n)?.id;
 
 // ===== Entity definitions =====
 const ENT = {
-  vehicles: { title:"الأسطول والمعدات", icon:"🚚", one:"مركبة / معدة", def:"الأسطول والمعدات", primary:"plate",
+  vehicles: { title:"الأسطول والمعدات", icon:"🚚", one:"مركبة / معدة", def:"الأسطول والمعدات", primary:"plate", search:["plate","kind","model","driver_name","location"],
     sub:(r) => [r.kind, r.model, r.driver_name && "السائق: " + r.driver_name].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "شغالة":"b-green", "متوقفة":"b-red", "صيانة":"b-amber" },
     fields:[
@@ -239,7 +257,7 @@ const ENT = {
       { k:"insurance_expiry", l:"انتهاء التأمين", t:"date", exp:1 },
       { k:"license_expiry", l:"انتهاء رخصة السائق", t:"date", exp:1 },
       { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
-  projects: { title:"المشاريع", icon:"🏗️", one:"مشروع", def:"المشاريع", primary:"name",
+  projects: { title:"المشاريع", icon:"🏗️", one:"مشروع", def:"المشاريع", primary:"name", search:["name","client","po_number"],
     sub:(r) => [r.client, r.po_number && "PO: " + r.po_number].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "جاري":"b-blue", "متأخر":"b-red", "مكتمل":"b-green", "معلق":"b-amber" }, progress:"progress",
     fields:[
@@ -248,7 +266,7 @@ const ENT = {
       { k:"status", l:"الحالة", t:"select", o:["جاري","متأخر","مكتمل","معلق"] },
       { k:"start_date", l:"تاريخ البداية", t:"date" }, { k:"end_date", l:"تاريخ التسليم", t:"date", deadline:1 },
       { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
-  legal_cases: { title:"القضايا", icon:"⚖️", one:"قضية", def:"القانونية", primary:"title",
+  legal_cases: { title:"القضايا", icon:"⚖️", one:"قضية", def:"القانونية", primary:"title", search:["title","case_number","court","opponent","lawyer"],
     sub:(r) => [r.case_number && "رقم " + r.case_number, r.court, r.lawyer && "المحامي: " + r.lawyer].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "مفتوحة":"b-blue", "قيد النظر":"b-amber", "مؤجلة":"b-amber", "مغلقة":"b-green" },
     fields:[
@@ -257,7 +275,7 @@ const ENT = {
       { k:"status", l:"الحالة", t:"select", o:["مفتوحة","قيد النظر","مؤجلة","مغلقة"] },
       { k:"next_hearing", l:"الجلسة القادمة", t:"date", hearing:1 },
       { k:"last_update", l:"آخر المستجدات", t:"textarea", wide:1 } ] },
-  invoices: { title:"الفواتير", icon:"🧾", one:"فاتورة", def:"المالية", primary:"number",
+  invoices: { title:"الفواتير", icon:"🧾", one:"فاتورة", def:"المالية", primary:"number", search:["number","party"],
     sub:(r) => [r.kind, r.party, fmtSAR(r.amount)].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "مدفوعة":"b-green", "غير مدفوعة":"b-amber", "متأخرة":"b-red" },
     fields:[
@@ -265,13 +283,13 @@ const ENT = {
       { k:"party", l:"الجهة" }, { k:"amount", l:"المبلغ (ر.س)", t:"number" },
       { k:"due_date", l:"تاريخ الاستحقاق", t:"date", due:1 },
       { k:"status", l:"الحالة", t:"select", o:["غير مدفوعة","مدفوعة","متأخرة"] } ] },
-  documents: { title:"الوثائق والتراخيص", icon:"📄", one:"وثيقة", def:"السلامة والامتثال", primary:"name",
+  documents: { title:"الوثائق والتراخيص", icon:"📄", one:"وثيقة", def:"السلامة والامتثال", primary:"name", search:["name","doc_type"],
     sub:(r) => [r.doc_type].filter(Boolean).join(" · "),
     fields:[
       { k:"name", l:"اسم الوثيقة", req:1, wide:1, ph:"السجل التجاري، تأهيل أرامكو، شهادة سلامة..." },
       { k:"doc_type", l:"النوع" }, { k:"expiry_date", l:"تاريخ الانتهاء", t:"date", exp:1 },
       { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
-  requests: { title:"الطلبات", icon:"📥", one:"طلب", def:null, primary:"title",
+  requests: { title:"الطلبات", icon:"📥", one:"طلب", def:null, primary:"title", search:["title","details"],
     sub:(r) => (r.details || "").slice(0, 90),
     status:"status", statusColor:{ "جديد":"b-blue", "قيد التنفيذ":"b-amber", "معتمد":"b-green", "مرفوض":"b-red", "منجز":"b-green" },
     fields:[
@@ -294,35 +312,91 @@ async function loadCompanies() {
   S.companies = c.data ?? [];
   S.allPeople = p.data ?? [];
 }
+// The API returns at most 1,000 rows per request. fetchAll pages through with .range() so nothing is silently cut off.
+// Large business tables (vehicles, invoices, ...) are never loaded whole: they are paged on the server (loadPage).
+const PAGE_SIZE = 50;
+async function fetchAll(build, chunk = 1000) {
+  let out = [], from = 0;
+  for (;;) {
+    const { data, error } = await build().range(from, from + chunk - 1);
+    if (error) throw error;
+    out = out.concat(data ?? []);
+    if (!data || data.length < chunk) return out;
+    from += chunk;
+  }
+}
+const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw error; return data; };
+
 async function loadAll() {
   const cid = S.cid;
-  const [rooms, members] = await Promise.all([
-    sb.from("rooms").select("*").eq("company_id", cid).order("last_message_at", { ascending:false }),
-    sb.from("room_members").select("*"),
-  ]);
-  S.rooms = rooms.data ?? [];
-  const rids = new Set(S.rooms.map((r) => r.id));
-  S.roomMembers = (members.data ?? []).filter((m) => rids.has(m.room_id));
-  const [co, dp, pp, notes, ...rest] = await Promise.all([
+  const PROFILE_COLS = "id,company_id,full_name,email,phone,job_title,avatar_url,department_id,requested_department_id,role,status,created_at";
+  const [co, deps, people, rooms, notes, stats, alerts, deptSum, homeProjects] = await Promise.all([
     sb.from("companies").select("*").eq("id", cid).single(),
-    sb.from("departments").select("*").eq("company_id", cid).order("created_at"),
-    sb.from("profiles").select("*").eq("company_id", cid).order("created_at"),
-    sb.from("manager_notes").select("*").eq("company_id", cid).order("created_at", { ascending:false }),
-    ...Object.keys(ENT).map((k) => sb.from(k).select("*").eq("company_id", cid).order("updated_at", { ascending:false, nullsFirst:false })),
+    fetchAll(() => sb.from("departments").select("*").eq("company_id", cid).order("created_at").order("id")),
+    fetchAll(() => sb.from("profiles").select(PROFILE_COLS).eq("company_id", cid).order("created_at").order("id")),
+    fetchAll(() => sb.from("rooms").select("*").eq("company_id", cid).order("last_message_at", { ascending:false }).order("id")),
+    sb.from("manager_notes").select("*").eq("company_id", cid).order("created_at", { ascending:false }).limit(200),
+    rpc("dashboard_stats", { cid }),
+    rpc("company_alerts", { cid, lim:300 }),
+    rpc("department_summary", { cid }),
+    sb.from("projects").select("id,name,status,progress,end_date").eq("company_id", cid).neq("status", "مكتمل").order("end_date", { ascending:true, nullsFirst:false }).limit(6),
   ]);
   S.company = co.data;
   S.settings = { company_name:co.data?.name ?? "", logo_url:co.data?.logo_url };
-  S.deps = dp.data ?? [];
-  S.people = pp.data ?? [];
-  S.data.manager_notes = notes.data ?? [];
-  Object.keys(ENT).forEach((k, i) => (S.data[k] = rest[i].data ?? []));
+  S.deps = deps; S.people = people; S.rooms = rooms;
+  const rids = rooms.map((r) => r.id);
+  S.roomMembers = [];
+  for (let i = 0; i < rids.length; i += 200) {
+    S.roomMembers = S.roomMembers.concat(await fetchAll(() => sb.from("room_members").select("*").in("room_id", rids.slice(i, i + 200)).order("room_id").order("user_id")));
+  }
+  S.notes = notes.data ?? [];
+  S.stats = stats ?? {};
+  S.alerts = alerts ?? [];
+  S.deptSummary = Object.fromEntries((deptSum ?? []).map((d) => [d.department_id, d]));
+  S.homeProjects = homeProjects.data ?? [];
+  S.page = {};                                    // server pages are refetched on demand
   if (!isSuper()) S.me = S.people.find((p) => p.id === S.session.user.id) ?? S.me;
+  await loadNotifications();
   document.title = S.settings.company_name + " | يقين";
+}
+async function loadNotifications() {
+  const { data } = await sb.from("notifications").select("*").order("created_at", { ascending:false }).limit(50);
+  S.notifs = data ?? [];
 }
 async function reload() {
   if (isSuper()) await loadCompanies();
   if (S.cid) await loadAll();
   renderShell();
+}
+
+// one server page of a business table: filters + search + count are done by the database
+function pageState(k) {
+  S.page = S.page || {};
+  return (S.page[k] = S.page[k] || { n:0, q:"", status:"", dep:"", rows:null, total:0, loading:false, key:"" });
+}
+const searchSafe = (q) => q.replace(/[,()*%\\:"']/g, " ").trim().slice(0, 60);
+async function loadPage(k) {
+  const st = pageState(k), cfg = ENT[k];
+  const key = JSON.stringify([S.cid, st.n, st.q, st.status, st.dep]);
+  if (st.loading || (st.rows && st.key === key)) return;
+  st.loading = true;
+  let q = sb.from(k).select("*", { count:"exact" }).eq("company_id", S.cid);
+  if (st.status && cfg.status) q = q.eq(cfg.status, st.status);
+  if (st.dep) q = q.eq("department_id", st.dep);
+  const term = searchSafe(st.q);
+  if (term) q = q.or(cfg.search.map((c) => `${c}.ilike.*${term}*`).join(","));
+  const { data, count, error } = await q.order("updated_at", { ascending:false }).order("id").range(st.n * PAGE_SIZE, st.n * PAGE_SIZE + PAGE_SIZE - 1);
+  st.loading = false;
+  if (error) { toast("خطأ في التحميل: " + error.message); st.rows = []; st.total = 0; }
+  else { st.rows = data ?? []; st.total = count ?? 0; }
+  st.key = key;
+  if (S.view === k) renderView();
+}
+async function getRecord(k, id) {
+  const hit = (S.page?.[k]?.rows ?? []).find((r) => r.id === id);
+  if (hit) return hit;
+  const { data } = await sb.from(k).select("*").eq("id", id).single();
+  return data;
 }
 async function loadPublic() {
   S.settings = { company_name:"يقين للأعمال" };
@@ -362,31 +436,21 @@ async function ai(body) {
   return data;
 }
 
-// ===== Computed alerts =====
-function computeAlerts() {
-  const out = [];
-  const push = (lvl, text, view, dep) => out.push({ lvl, text, view, dep });
-  for (const [k, cfg] of Object.entries(ENT)) {
-    for (const r of S.data[k] ?? []) {
-      const name = r[cfg.primary];
-      for (const f of cfg.fields) {
-        const v = r[f.k]; if (!v) continue; const d = daysLeft(v);
-        if (f.exp) {
-          if (d < 0) push("h", `${f.l} منتهي: ${name} (منذ ${-d} يوم)`, k, r.department_id);
-          else if (d <= 30) push(d <= 7 ? "h" : "m", `${f.l} بعد ${d} يوم: ${name}`, k, r.department_id);
-        }
-        if (f.hearing && r.status !== "مغلقة" && d >= 0 && d <= 14) push(d <= 3 ? "h" : "m", `جلسة قضية "${name}" بعد ${d} يوم`, k, r.department_id);
-        if (f.due && r.status !== "مدفوعة" && d < 0) push("h", `فاتورة ${name} متأخرة ${-d} يوم (${fmtSAR(r.amount)})`, k, r.department_id);
-        if (f.deadline && r.status !== "مكتمل" && d < 0) push("h", `مشروع "${name}" تجاوز موعد التسليم`, k, r.department_id);
-      }
-      if (k === "vehicles" && r.status !== "شغالة") push("m", `${r.plate} ${r.status}${r.location ? " - " + r.location : ""}`, k, r.department_id);
-      if (k === "projects" && r.status === "متأخر") push("h", `مشروع "${name}" متأخر (${r.progress ?? 0}%)`, k, r.department_id);
-      if (k === "requests" && r.priority === "عاجل" && !["منجز","مرفوض"].includes(r.status)) push("m", `طلب عاجل: ${name}`, k, r.department_id);
-    }
+// ===== Alerts (computed by the database over ALL rows: public.company_alerts) =====
+function alertText(a) {
+  const d = a.days;
+  switch (a.kind) {
+    case "expiry":  return d < 0 ? `${a.label}: منتهي منذ ${-d} يوم` : `${a.label}: بعد ${d} يوم`;
+    case "hearing": return `جلسة قضية "${a.label}" بعد ${d} يوم`;
+    case "overdue": return `فاتورة ${a.label} متأخرة ${-d} يوم (${fmtSAR(a.amount)})`;
+    case "late":    return `مشروع "${a.label}" متأخر أو تجاوز موعد التسليم`;
+    case "urgent":  return `طلب عاجل: ${a.label}`;
+    case "note":    return `ملاحظة مدير بانتظار الرد: ${a.label}`;
+    default:        return a.label;
   }
-  for (const n of S.data.manager_notes ?? []) if (n.status === "مفتوحة") push("l", `ملاحظة مدير بانتظار الرد: ${n.subject || n.body.slice(0, 40)}`, "notes", n.department_id);
-  const rank = { h:0, m:1, l:2 };
-  return out.sort((a, b) => rank[a.lvl] - rank[b.lvl]);
+}
+function computeAlerts() {
+  return (S.alerts ?? []).map((a) => ({ lvl:a.level, text:alertText(a), view:a.entity === "manager_notes" ? "notes" : a.entity, dep:a.department_id, id:a.entity_id }));
 }
 
 // ===== Auth view =====
@@ -412,7 +476,7 @@ function renderAuth(message) {
       </form>` : S.authTab === "reset" ? `
       <form onsubmit="App.setNewPw(event)">
         <p class="mb">اكتب كلمة المرور الجديدة</p>
-        <label class="f"><span>كلمة المرور الجديدة (6 أحرف أو أكثر)</span><input class="in pw" name="password" type="password" minlength="6" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
+        <label class="f"><span>كلمة المرور الجديدة (8 أحرف أو أكثر)</span><input class="in pw" name="password" type="password" minlength="8" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
         <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار كلمة المرور</label>
         <button class="btn pri full">حفظ والدخول</button>
       </form>` : `
@@ -422,15 +486,11 @@ function renderAuth(message) {
           <button type="button" class="btn" onclick="App.checkCode()">تحقق</button></div></label>
         ${S.signupCo ? `<div class="msg ok mb">✅ ${esc(S.signupCo.name)}${S.signupCo.is_admin_code ? " · ستسجل كمدير الشركة" : ""}</div>` : ""}
         <label class="f"><span>الاسم الكامل</span><input class="in" name="full_name" required></label>
-        <div class="two">
-          <label class="f"><span>القسم</span><select class="in" name="department_id" ${S.signupCo && !S.signupCo.is_admin_code ? "required" : ""}>
-            <option value="">${S.signupCo ? "اختر القسم" : "أدخل رمز الشركة أولاً"}</option>${(S.signupCo?.departments ?? []).map((d) => `<option value="${d.id}">${esc(d.icon)} ${esc(d.name)}</option>`).join("")}
-          </select></label>
-          <label class="f"><span>المسمى الوظيفي</span><input class="in" name="job_title"></label>
-        </div>
+        <label class="f"><span>المسمى الوظيفي</span><input class="in" name="job_title"></label>
+        ${S.signupCo && !S.signupCo.is_admin_code ? `<p class="muted small mb">مدير الشركة هو اللي يحدد قسمك ويوافق على حسابك.</p>` : ""}
         <label class="f"><span>رقم الجوال</span><input class="in" name="phone" dir="ltr"></label>
         <label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
-        <label class="f"><span>كلمة المرور (6 أحرف أو أكثر)</span><input class="in pw" name="password" type="password" minlength="6" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
+        <label class="f"><span>كلمة المرور (8 أحرف أو أكثر)</span><input class="in pw" name="password" type="password" minlength="8" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
         <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار كلمة المرور</label>
         <button class="btn pri full">إنشاء الحساب</button>
       </form>`}
@@ -447,7 +507,8 @@ function navItems() {
   if (!S.cid) return [...top, { v:"profile", i:"👤", l:"ملفي الشخصي" }];
   const alerts = computeAlerts();
   const cnt = (v) => alerts.filter((a) => a.view === v).length;
-  const openNotes = (S.data.manager_notes ?? []).filter((n) => n.status === "مفتوحة").length;
+  const openNotes = S.stats?.notes_open ?? 0;
+  const pending = S.stats?.pending_members ?? 0;
   return [
     ...top,
     { sec:isSuper() ? "الشركة: " + (S.company?.name || "") : "عام" },
@@ -457,16 +518,17 @@ function navItems() {
     { v:"notes", i:"📌", l:"ملاحظات المدير", c:openNotes },
     { sec:"الشركة" },
     { v:"departments", i:"🏢", l:isAdmin() ? "الأقسام" : "قسمي" },
-    { v:"people", i:"👥", l:"الموظفين" },
+    { v:"people", i:"👥", l:"الموظفين", c:isAdmin() ? pending : 0 },
     { sec:"العمليات" },
     ...Object.entries(ENT).map(([k, c]) => ({ v:k, i:c.icon, l:c.title, c:cnt(k) })),
+    ...(isAdmin() ? [{ sec:"الحوكمة" }, { v:"audit", i:"🧾", l:"سجل التدقيق" }, { v:"trash", i:"🗑️", l:"سلة المحذوفات" }, { v:"whatsapp", i:"💬", l:"رسائل الواتساب" }] : []),
     { sec:"الحساب" },
     { v:"profile", i:"👤", l:"ملفي الشخصي" },
     ...(isAdmin() ? [{ v:"settings", i:"⚙️", l:"إعدادات الشركة" }] : []),
   ];
 }
 function titleOf(v) {
-  return ({ platform:"لوحة يقين", rooms:"غرف العمليات", room:(S.rooms ?? []).find((r) => r.id === S.param)?.title ?? "غرفة عمليات", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
+  return ({ platform:"لوحة يقين", rooms:"غرف العمليات", room:(S.rooms ?? []).find((r) => r.id === S.param)?.title ?? "غرفة عمليات", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", audit:"سجل التدقيق", trash:"سلة المحذوفات", whatsapp:"رسائل الواتساب", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
 }
 function renderShell() {
   const s = S.settings, me = S.me;
@@ -489,10 +551,12 @@ function renderShell() {
       <div class="top">
         <button class="menu-btn" onclick="App.menu(true)">☰</button>
         <h2>${esc(titleOf(S.view))}</h2>
+        ${S.cid ? `<button class="btn sm ghost" title="التنبيهات" onclick="Gov.bell()" style="position:relative">🔔${(S.notifs ?? []).filter((n) => !n.read_at).length ? `<span class="badge b-red" style="position:absolute;top:-6px;left:-6px;padding:1px 6px">${(S.notifs ?? []).filter((n) => !n.read_at).length}</span>` : ""}</button>` : ""}
         <div class="me" onclick="App.go('${isSuper() ? "platform" : "profile"}')">
           <span class="nm small">${esc(me?.full_name)}</span>${avatar(me)}
         </div>
       </div>
+      ${S.mfaNeeded ? `<div class="msg err" style="margin:10px 22px">🛡️ شركتك تلزم المدراء بالتحقق الثنائي. صلاحيات المدير موقوفة لين تفعّله من <a href="#" onclick="App.go('profile');return false">ملفك الشخصي</a> ثم تسجل دخول من جديد.</div>` : ""}
       ${isSuper() && S.cid && S.view !== "platform" ? `<div style="background:var(--blueSoft);color:#93C5FD;padding:8px 22px;font-size:13px" class="row">🌐 تشاهد شركة <b>${esc(S.company?.name)}</b> بصلاحية مسؤول المنصة<span class="sp"></span><button class="btn sm ghost" onclick="App.go('platform')">رجوع لكل الشركات</button></div>` : ""}
       <div class="content" id="content"></div>
     </main>
@@ -516,8 +580,11 @@ function renderView() {
   else if (v === "departments") c.innerHTML = isAdmin() ? viewDepartments() : viewDept(S.me?.department_id);
   else if (v === "dept") c.innerHTML = viewDept(S.param);
   else if (v === "people") c.innerHTML = viewPeople();
-  else if (v === "profile") c.innerHTML = viewProfile();
-  else if (v === "settings") c.innerHTML = viewSettings();
+  else if (v === "profile") { c.innerHTML = viewProfile(); MFA.box(); }
+  else if (v === "settings") { c.innerHTML = viewSettings(); loadAIUsage(); }
+  else if (v === "audit") { c.innerHTML = viewAudit(); Gov.audit(); }
+  else if (v === "trash") { c.innerHTML = viewTrash(); Gov.trash(); }
+  else if (v === "whatsapp") { c.innerHTML = viewWhatsApp(); Gov.wa(); }
   else if (ENT[v]) c.innerHTML = viewEntity(v);
   if (v === "ai") { const m = $("#msgs"); if (m) m.scrollTop = m.scrollHeight; }
 }
@@ -575,7 +642,7 @@ function viewRooms() {
   <div class="toolbar"><div class="sp muted small" style="align-self:center">غرف نقاش لموضوع محدد: محادثة، رسائل صوتية، صور ومستندات، مع تلخيص ذكي للقرارات.</div>
     <button class="btn pri" onclick="App.roomForm()">+ غرفة عمليات جديدة</button></div>
   ${rooms.length ? `<div class="grid g3">${rooms.map((r) => { const mem = roomMembers(r.id); return `
-    <div class="rec" onclick="App.go('room','${r.id}')">
+    <div class="rec" onclick="App.go('room','${safeId(r.id)}')">
       <div class="row"><div class="t sp">🗣️ ${esc(r.title)}</div><span class="badge ${r.status === "مفتوحة" ? "b-green" : ""}">${esc(r.status)}</span></div>
       ${r.description ? `<div class="muted small" style="margin-top:4px">${esc(r.description.slice(0, 110))}</div>` : ""}
       <div class="row mt"><div class="avs">${mem.slice(0, 6).map((p) => avatar(p)).join("")}</div><span class="muted small">${mem.length} عضو</span><span class="sp"></span><span class="muted small">${fmtTime(r.last_message_at)}</span></div>
@@ -592,9 +659,9 @@ function viewRoom(id) {
     <div class="room-head">
       <button class="btn sm ghost" onclick="App.go('rooms')">→</button>
       <div class="sp" style="min-width:140px"><b>🗣️ ${esc(r.title)}</b>${r.description ? `<div class="muted small">${esc(r.description)}</div>` : ""}</div>
-      <div class="avs" style="cursor:pointer" onclick="App.roomForm('${id}')">${mem.slice(0, 5).map((p) => avatar(p)).join("")}</div>
-      <button class="btn sm ai" id="sumBtn" onclick="App.roomSummary('${id}')">✨ لخّص النقاش</button>
-      ${canAdminRoom(r) ? `<button class="btn sm ghost" onclick="App.roomForm('${id}')">⚙️</button>` : ""}
+      <div class="avs" style="cursor:pointer" onclick="App.roomForm('${safeId(id)}')">${mem.slice(0, 5).map((p) => avatar(p)).join("")}</div>
+      <button class="btn sm ai" id="sumBtn" onclick="App.roomSummary('${safeId(id)}')">✨ لخّص النقاش</button>
+      ${canAdminRoom(r) ? `<button class="btn sm ghost" onclick="App.roomForm('${safeId(id)}')">⚙️</button>` : ""}
     </div>
     <div class="msgs" id="msgs"><div class="empty"><span class="spin"></span></div></div>
     ${open ? `<div class="composer" id="composer">
@@ -604,7 +671,7 @@ function viewRoom(id) {
         <input class="in" id="rmInput" placeholder="اكتب رسالة..." autocomplete="off">
         <button class="btn pri">إرسال</button>
       </form>
-    </div>` : `<div class="msg mt" style="text-align:center">🔒 هذه الغرفة مغلقة${canAdminRoom(r) ? ` · <a href="#" onclick="App.roomStatus('${id}','مفتوحة');return false">إعادة فتحها</a>` : ""}</div>`}
+    </div>` : `<div class="msg mt" style="text-align:center">🔒 هذه الغرفة مغلقة${canAdminRoom(r) ? ` · <a href="#" onclick="App.roomStatus('${safeId(id)}','مفتوحة');return false">إعادة فتحها</a>` : ""}</div>`}
   </div>`;
 }
 
@@ -617,7 +684,7 @@ function trHtml(m) {
     return `<div class="tr">${t.lang && t.lang !== "ar" ? `<div class="lg">🌐 مترجم من ${esc(t.lang_name_ar || t.lang)}</div>` : ""}${rows.map(([k, l]) => `<div><div class="lg">${l}</div><div dir="${k === "en" ? "ltr" : "rtl"}">${esc(t[k])}</div></div>`).join("")}</div>`;
   }
   if (S.trPending?.[m.id]) return `<div class="tr"><span class="spin"></span> <span class="lg">جاري الترجمة...</span></div>`;
-  return `<div><button class="trbtn" onclick="Room.translate('${m.id}')">🌐 ترجمة</button></div>`;
+  return `<div><button class="trbtn" onclick="Room.translate('${safeId(m.id)}')">🌐 ترجمة</button></div>`;
 }
 function msgHtml(m) {
   const mine = m.user_id === S.me?.id, p = personById(m.user_id);
@@ -625,7 +692,7 @@ function msgHtml(m) {
   let inner;
   if (m.kind === "text") inner = esc(m.body) + trHtml(m);
   else if (m.kind === "ai") inner = `<div class="muted small mb">✨ ملخص يقين الذكي</div>${md(m.body || "")}`;
-  else if (m.kind === "image") inner = url ? `<img class="pic" src="${esc(url)}" onclick="Room.zoom('${esc(url)}')">` : `<span class="spin"></span> صورة`;
+  else if (m.kind === "image") inner = url ? `<img class="pic" src="${esc(url)}" data-url="${esc(url)}" onclick="Room.zoom(this.dataset.url)">` : `<span class="spin"></span> صورة`;
   else if (m.kind === "audio") inner = url ? `<audio controls preload="metadata" src="${esc(url)}"></audio>` : `<span class="spin"></span> رسالة صوتية`;
   else inner = `<a class="fileln" href="${esc(url || "#")}" target="_blank" rel="noopener"><span class="ic">📄</span><span><b>${esc(m.file_name)}</b><div class="muted small">${m.file_size ? fmtSize(m.file_size) : ""} · اضغط للفتح</div></span></a>`;
   if (m.kind === "ai") return `<div class="m ai"><div><div class="b">${inner}</div><div class="tm">${fmtTime(m.created_at)} · نشره ${esc(p?.full_name || "")}</div></div></div>`;
@@ -644,7 +711,7 @@ const Room = {
     this.ch = sb.channel("room-" + id)
       .on("postgres_changes", { event:"INSERT", schema:"public", table:"room_messages", filter:`room_id=eq.${id}` }, (p) => this.add(p.new))
       .on("postgres_changes", { event:"UPDATE", schema:"public", table:"room_messages", filter:`room_id=eq.${id}` }, (p) => { const l = S.roomMsgs[id] || []; const i = l.findIndex((x) => x.id === p.new.id); if (i >= 0) { l[i] = { ...l[i], ...p.new }; this.render(); } })
-      .on("postgres_changes", { event:"DELETE", schema:"public", table:"room_messages" }, (p) => { S.roomMsgs[id] = (S.roomMsgs[id] || []).filter((m) => m.id !== p.old.id); this.render(); })
+      .on("postgres_changes", { event:"DELETE", schema:"public", table:"room_messages", filter:`room_id=eq.${id}` }, (p) => { S.roomMsgs[id] = (S.roomMsgs[id] || []).filter((m) => m.id !== p.old.id); this.render(); })
       .subscribe();
   },
   leave() { if (this.ch) { sb.removeChannel(this.ch); this.ch = null; } this.id = null; this.stopRec(true); },
@@ -735,7 +802,7 @@ const Room = {
   async translate(mid) {
     const list = S.roomMsgs[this.id] || []; const m = list.find((x) => x.id === mid); if (!m) return;
     S.trPending = S.trPending || {}; S.trPending[mid] = true; this.render();
-    try { const { translation } = await ai({ mode:"translate", text:m.body, message_id:mid }); if (translation) m.translation = translation; }
+    try { const { translation } = await ai({ mode:"translate", message_id:mid }); if (translation) m.translation = translation; }
     catch (err) { toast(err.message); }
     delete S.trPending[mid]; this.render();
   },
@@ -750,13 +817,14 @@ window.Room = Room;
 function viewPlatform() {
   const cos = S.companies;
   const users = (id) => S.allPeople.filter((p) => p.company_id === id);
-  const active = cos.filter((c) => c.active).length;
+  const active = cos.filter((c) => c.active && !c.deleted_at).length;
   return `
   <div class="ai-hero mb"><div class="row">
     <div style="font-size:34px">🌐</div>
     <div class="sp"><b style="font-size:17px">لوحة يقين</b><div class="muted small">كل الشركات المشتركة في المنصة. كل شركة معزولة ببياناتها وموظفيها، وأنت تقدر تدخل أي شركة.</div></div>
     <button class="btn pri" onclick="App.companyForm()">+ شركة جديدة</button>
-  </div></div>
+  </div>
+  <div class="row mt"><button class="btn sm ghost" onclick="Gov.events()">🩺 أحداث النظام</button><button class="btn sm ghost" onclick="Gov.inviteForm()">👤 دعوة مسؤول منصة</button></div></div>
   <div class="grid g4 mb">
     <div class="card"><div class="kpi"><div class="v">${cos.length}</div><div class="l">الشركات</div></div></div>
     <div class="card"><div class="kpi"><div class="v">${active}</div><div class="l">شركات فعّالة</div></div></div>
@@ -766,14 +834,14 @@ function viewPlatform() {
     <div class="card">
       <div class="row"><div class="logo">${c.logo_url ? `<img src="${esc(c.logo_url)}">` : "🏢"}</div>
         <div class="sp"><b>${esc(c.name)}</b><div class="muted small">${u.length} مستخدم · ${adm} مدير</div></div>
-        <span class="badge ${c.active ? "b-green" : "b-red"}">${c.active ? "فعّالة" : "موقوفة"}</span></div>
+        <span class="badge ${c.deleted_at ? "b-red" : c.active ? "b-green" : "b-red"}">${c.deleted_at ? "محذوفة (قابلة للاسترجاع)" : c.active ? "فعّالة" : "موقوفة"}</span></div>
       <div class="mt small">
         <div class="row"><span class="muted">رمز الموظفين:</span><b dir="ltr">${esc(c.join_code)}</b></div>
         <div class="row"><span class="muted">رمز المدير:</span><b dir="ltr">${esc(c.admin_code)}</b></div>
       </div>
       <div class="row mt">
-        <button class="btn sm pri" onclick="App.enterCompany('${c.id}')">دخول الشركة</button>
-        <button class="btn sm ghost" onclick="App.companyForm('${c.id}')">إدارة</button>
+        <button class="btn sm pri" onclick="App.enterCompany('${safeId(c.id)}')">دخول الشركة</button>
+        <button class="btn sm ghost" onclick="App.companyForm('${safeId(c.id)}')">إدارة</button>
       </div>
     </div>`; }).join("")}</div>` :
   `<div class="card empty"><div style="font-size:40px">🏢</div>ما فيه شركات للحين.<br>أضف أول شركة، وبيطلع لك رمزين: رمز تعطيه لمدير الشركة عشان يسجل كمدير، ورمز يوزعه المدير على موظفينه.
@@ -782,14 +850,11 @@ function viewPlatform() {
 
 // ===== Home =====
 function viewHome() {
-  const d = S.data, alerts = computeAlerts();
-  const veh = d.vehicles ?? [], prj = d.projects ?? [], cases = d.legal_cases ?? [], inv = d.invoices ?? [];
-  const active = veh.filter((v) => v.status === "شغالة").length;
-  const overdue = inv.filter((i) => i.status !== "مدفوعة" && daysLeft(i.due_date) < 0);
-  const receivable = inv.filter((i) => i.kind === "صادرة" && i.status !== "مدفوعة").reduce((a, b) => a + Number(b.amount || 0), 0);
-  const openCases = cases.filter((c) => c.status !== "مغلقة").length;
-  const runPrj = prj.filter((p) => p.status !== "مكتمل");
-  const avgProg = runPrj.length ? Math.round(runPrj.reduce((a, b) => a + (b.progress || 0), 0) / runPrj.length) : 0;
+  const st = S.stats ?? {}, alerts = computeAlerts();
+  const vTotal = st.vehicles_total ?? 0, active = st.vehicles_active ?? 0;
+  const overdueN = st.invoices_overdue ?? 0, receivable = st.receivables ?? 0, openCases = st.cases_open ?? 0;
+  const runN = st.projects_running ?? 0, avgProg = st.projects_avg_progress ?? 0;
+  const runPrj = S.homeProjects ?? [];
   const hi = alerts.filter((a) => a.lvl === "h").length;
   const kpi = (v, l, s, view, cls = "") => `<div class="card kpi" onclick="App.go('${view}')"><div class="v">${v}</div><div class="l">${l}</div>${s ? `<div class="s ${cls}">${s}</div>` : ""}</div>`;
   const greet = new Date().getHours() < 12 ? "صباح الخير" : "مساء الخير";
@@ -800,12 +865,12 @@ function viewHome() {
   ${briefCard()}
 
   <div class="grid g4 mt">
-    ${kpi(fmtNum(S.people.length), "الموظفين", `${S.deps.length} أقسام`, "people")}
-    ${kpi(`${active}<span class="muted" style="font-size:16px"> / ${veh.length}</span>`, "مركبات ومعدات شغالة", veh.length - active ? `${veh.length - active} متوقفة أو صيانة` : "كلها شغالة", "vehicles", veh.length - active ? "b-amber" : "")}
-    ${kpi(runPrj.length, "مشاريع جارية", `متوسط الإنجاز ${avgProg}%`, "projects")}
-    ${kpi(openCases, "قضايا مفتوحة", "", "legal_cases")}
-    ${kpi(fmtSAR(receivable), "مستحقات لم تُحصّل", overdue.length ? `${overdue.length} فواتير متأخرة` : "", "invoices", "b-red")}
-    ${kpi(hi, "تنبيهات عاجلة", alerts.length + " تنبيه إجمالاً", "home", hi ? "b-red" : "")}
+    ${kpi(fmtNum(st.employees ?? 0), "الموظفين", `${S.deps.length} أقسام${st.pending_members ? ` · ${st.pending_members} بانتظار الموافقة` : ""}`, "people", st.pending_members ? "b-amber" : "")}
+    ${kpi(`${fmtNum(active)}<span class="muted" style="font-size:16px"> / ${fmtNum(vTotal)}</span>`, "مركبات ومعدات شغالة", vTotal - active ? `${fmtNum(vTotal - active)} متوقفة أو صيانة` : "كلها شغالة", "vehicles", vTotal - active ? "b-amber" : "")}
+    ${kpi(fmtNum(runN), "مشاريع جارية", `متوسط الإنجاز ${avgProg}%`, "projects")}
+    ${kpi(fmtNum(openCases), "قضايا مفتوحة", "", "legal_cases")}
+    ${kpi(fmtSAR(receivable), "مستحقات لم تُحصّل", overdueN ? `${fmtNum(overdueN)} فواتير متأخرة` : "", "invoices", "b-red")}
+    ${kpi(hi, "تنبيهات عاجلة", alerts.length + (alerts.length >= 300 ? "+" : "") + " تنبيه إجمالاً", "home", hi ? "b-red" : "")}
   </div>
 
   <div class="grid g2 mt">
@@ -816,7 +881,7 @@ function viewHome() {
       </div></div>
     <div class="card"><h3>🏗️ تقدّم المشاريع</h3>
       ${runPrj.length ? runPrj.slice(0, 6).map((p) => `
-        <div class="mb" style="cursor:pointer" onclick="App.edit('projects','${p.id}')">
+        <div class="mb" style="cursor:pointer" onclick="App.edit('projects','${safeId(p.id)}')">
           <div class="row"><b>${esc(p.name)}</b><span class="sp"></span><span class="badge ${ENT.projects.statusColor[p.status] || ""}">${esc(p.status)}</span></div>
           <div class="bar"><i style="width:${p.progress || 0}%;${p.status === "متأخر" ? "background:var(--red)" : ""}"></i></div>
           <div class="muted small">${p.progress || 0}% · التسليم ${fmtDate(p.end_date)}</div>
@@ -826,10 +891,10 @@ function viewHome() {
   ${isAdmin() ? `<div class="card mt"><h3>🏢 الأقسام</h3><div class="grid g4">${S.deps.map((dp) => deptMini(dp)).join("")}</div></div>` : ""}`;
 }
 function deptMini(dp) {
-  const n = S.people.filter((p) => p.department_id === dp.id).length;
-  const recs = Object.keys(ENT).reduce((a, k) => a + (S.data[k] ?? []).filter((r) => r.department_id === dp.id).length, 0);
+  const sum = S.deptSummary?.[dp.id] ?? {};
+  const n = sum.people ?? 0, recs = sum.records ?? 0;
   const al = computeAlerts().filter((a) => a.dep === dp.id && a.lvl === "h").length;
-  return `<div class="card kpi" style="background:var(--panel2)" onclick="App.go('dept','${dp.id}')">
+  return `<div class="card kpi" style="background:var(--panel2)" onclick="App.go('dept','${safeId(dp.id)}')">
     <div style="font-size:24px">${esc(dp.icon)}</div><b>${esc(dp.name)}</b>
     <div class="muted small">${n} موظف · ${recs} سجل</div>${al ? `<div class="s"><span class="badge b-red">${al} عاجل</span></div>` : ""}</div>`;
 }
@@ -864,7 +929,7 @@ function briefCard() {
       </div>
       <div><h3 style="font-size:14px;margin-bottom:8px">✅ قرارات مقترحة لليوم</h3>
         ${(b.actions ?? []).map((a, i) => `<div class="risk" style="border-right-color:var(--green)"><b>${i + 1}. ${esc(a.title)}</b><div class="small muted">${esc(a.why)}</div>
-          ${isAdmin() && a.department && depByName(a.department) ? `<button class="btn sm ghost mt" onclick='App.noteFromAI(${JSON.stringify(depByName(a.department))}, ${JSON.stringify(a.title)}, ${JSON.stringify(a.why || "")})'>📌 أرسلها ملاحظة لـ${esc(a.department)}</button>` : ""}</div>`).join("")}
+          ${isAdmin() && a.department && depByName(a.department) ? `<button class="btn sm ghost mt" onclick="App.noteFromAI(${Number(i)})">📌 أرسلها ملاحظة لـ${esc(a.department)}</button>` : ""}</div>`).join("")}
       </div>
     </div>
     ${(b.insights ?? []).length ? `<div class="mt"><h3 style="font-size:14px;margin-bottom:6px">💡 ملاحظات ذكية</h3>${b.insights.map((t) => `<div class="small" style="margin-bottom:4px">• ${esc(t)}</div>`).join("")}</div>` : ""}
@@ -881,7 +946,7 @@ function viewAI() {
       ${S.chat.map((m) => `<div class="bub ${m.role === "user" ? "u" : "a"}">${m.role === "user" ? esc(m.content) : md(m.content)}</div>`).join("")}
       ${S.chatBusy ? `<div class="bub a typing"><span></span><span></span><span></span></div>` : ""}
     </div>
-    ${!S.chat.length ? `<div class="chips">${SUGGEST.map((q) => `<button class="chip" onclick='App.ask(${JSON.stringify(q)})'>${esc(q)}</button>`).join("")}</div>` : ""}
+    ${!S.chat.length ? `<div class="chips">${SUGGEST.map((q, i) => `<button class="chip" onclick="App.askSuggested(${i})">${esc(q)}</button>`).join("")}</div>` : ""}
     <form class="composer" onsubmit="App.ask(null, event)">
       <input class="in" id="q" placeholder="اكتب سؤالك..." autocomplete="off" ${S.chatBusy ? "disabled" : ""}>
       <button class="btn pri" ${S.chatBusy ? "disabled" : ""}>إرسال</button>
@@ -897,7 +962,7 @@ function md(t) {
 
 // ===== Notes =====
 function viewNotes() {
-  const notes = S.data.manager_notes ?? [];
+  const notes = S.notes ?? [];
   const col = { "مفتوحة":"b-amber", "تم الرد":"b-blue", "منجزة":"b-green" };
   return `
   <div class="toolbar">${isAdmin() ? `<button class="btn pri" onclick="App.noteForm()">+ ملاحظة لقسم</button>` : `<div class="muted small">ملاحظات المدير الموجهة لقسمك. رد عليها ليتابعها المدير.</div>`}</div>
@@ -910,9 +975,9 @@ function viewNotes() {
       <div style="margin-top:6px;white-space:pre-wrap">${esc(n.body)}</div>
       ${n.reply ? `<div class="risk mt" style="border-right-color:var(--blue)"><div class="muted small">رد القسم ${n.replied_by ? "· " + esc(S.people.find((p) => p.id === n.replied_by)?.full_name || "") : ""}</div>${esc(n.reply)}</div>` : ""}
       <div class="row mt">
-        ${n.status !== "منجزة" ? `<button class="btn sm" onclick="App.replyForm('${n.id}')">💬 ${n.reply ? "تعديل الرد" : "رد"}</button>` : ""}
-        ${isAdmin() && n.status !== "منجزة" ? `<button class="btn sm ghost" onclick="App.noteStatus('${n.id}','منجزة')">✔ إغلاق كمنجزة</button>` : ""}
-        ${isAdmin() ? `<button class="btn sm danger" onclick="App.delNote('${n.id}')">حذف</button>` : ""}
+        ${n.status !== "منجزة" ? `<button class="btn sm" onclick="App.replyForm('${safeId(n.id)}')">💬 ${n.reply ? "تعديل الرد" : "رد"}</button>` : ""}
+        ${isAdmin() && n.status !== "منجزة" ? `<button class="btn sm ghost" onclick="App.noteStatus('${safeId(n.id)}','منجزة')">✔ إغلاق كمنجزة</button>` : ""}
+        ${isAdmin() ? `<button class="btn sm danger" onclick="App.delNote('${safeId(n.id)}')">حذف</button>` : ""}
       </div>
     </div>`).join("")}</div>` : `<div class="card empty">لا توجد ملاحظات بعد.</div>`}`;
 }
@@ -924,13 +989,13 @@ function viewDepartments() {
 function viewDept(id) {
   if (!id) return `<div class="card empty">لم يتم تحديد قسمك بعد. حدّث ملفك الشخصي.<br><button class="btn mt" onclick="App.go('profile')">ملفي</button></div>`;
   const dp = S.deps.find((d) => d.id === id) || {};
-  const staff = S.people.filter((p) => p.department_id === id);
-  const notes = (S.data.manager_notes ?? []).filter((n) => n.department_id === id);
+  const staff = S.people.filter((p) => p.department_id === id && p.status === "active");
+  const notes = (S.notes ?? []).filter((n) => n.department_id === id);
   const alerts = computeAlerts().filter((a) => a.dep === id);
   return `
   <div class="row mb"><div style="font-size:30px">${esc(dp.icon)}</div><div class="sp"><div style="font-size:19px;font-weight:700">${esc(dp.name)}</div><div class="muted small">${staff.length} موظف</div></div>
-    ${isAdmin() ? `<button class="btn pri" onclick="App.noteForm('${id}')">📌 ملاحظة لهذا القسم</button>` : ""}</div>
-  <div class="grid g4 mb">${Object.entries(ENT).map(([k, c]) => { const n = (S.data[k] ?? []).filter((r) => r.department_id === id).length; return n ? `<div class="card kpi" onclick="App.go('${k}','${id}')"><div style="font-size:20px">${c.icon}</div><div class="v" style="font-size:22px">${n}</div><div class="l">${c.title}</div></div>` : ""; }).join("")}</div>
+    ${isAdmin() ? `<button class="btn pri" onclick="App.noteForm('${safeId(id)}')">📌 ملاحظة لهذا القسم</button>` : ""}</div>
+  <div class="grid g4 mb">${Object.entries(ENT).map(([k, c]) => `<div class="card kpi" onclick="App.go('${k}','${safeId(id)}')"><div style="font-size:20px">${c.icon}</div><div class="l">${c.title}</div><div class="s muted">عرض سجلات القسم</div></div>`).join("")}</div>
   <div class="grid g2">
     <div class="card"><h3>👥 الموظفين</h3><div class="list">${staff.map(personRow).join("") || `<div class="empty">لا يوجد موظفين</div>`}</div></div>
     <div><div class="card"><h3>🔔 تنبيهات القسم</h3><div class="list">${alerts.map((a) => `<div class="it"><span class="dot" style="background:${a.lvl === "h" ? "var(--red)" : "var(--amber)"}"></span><div>${esc(a.text)}</div></div>`).join("") || `<div class="muted small">لا توجد تنبيهات</div>`}</div></div>
@@ -938,7 +1003,7 @@ function viewDept(id) {
   </div>`;
 }
 function personRow(p) {
-  return `<div class="it person" ${isAdmin() ? `style="cursor:pointer" onclick="App.personForm('${p.id}')"` : ""}>${avatar(p)}
+  return `<div class="it person" ${isAdmin() ? `style="cursor:pointer" onclick="App.personForm('${safeId(p.id)}')"` : ""}>${avatar(p)}
     <div class="sp"><b>${esc(p.full_name || "بدون اسم")}</b>${p.role === "admin" ? ` <span class="badge b-green">مدير</span>` : ""}
     <div class="muted small">${esc(p.job_title || "")}${p.phone ? " · " + esc(p.phone) : ""}</div></div></div>`;
 }
@@ -946,34 +1011,57 @@ function personRow(p) {
 // ===== People =====
 function viewPeople() {
   const q = (S.peopleQ || "").trim();
-  const list = S.people.filter((p) => !q || [p.full_name, p.job_title, p.email, depName(p.department_id)].join(" ").includes(q));
+  const pending = S.people.filter((p) => p.status === "pending");
+  const all = S.people.filter((p) => p.status !== "pending" && (!q || [p.full_name, p.job_title, p.email, depName(p.department_id)].join(" ").includes(q)));
+  const n = S.peopleN || 0, pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  const list = all.slice(n * PAGE_SIZE, n * PAGE_SIZE + PAGE_SIZE);
+  const depOpts = S.deps.map((d) => `<option value="${d.id}">${esc(d.icon)} ${esc(d.name)}</option>`).join("");
   return `
+  ${isAdmin() && pending.length ? `<div class="card mb"><h3>⏳ طلبات انضمام بانتظار موافقتك (${pending.length})</h3>
+    <p class="muted small mb">ما يقدر الموظف يشوف أي بيانات قبل ما توافق وتحدد قسمه.</p>
+    ${pending.map((p) => `<form class="row mb" style="border-top:1px solid var(--line);padding-top:10px" onsubmit="App.approve(event,'${safeId(p.id)}')">
+      <div class="sp"><b>${esc(p.full_name || "بدون اسم")}</b><div class="muted small" dir="ltr">${esc(p.email)}</div><div class="muted small">${esc(p.job_title || "")} · سجّل ${fmtDate(p.created_at)}</div></div>
+      <select class="in" name="dept" required style="flex:0 0 160px"><option value="">اختر القسم</option>${depOpts}</select>
+      <select class="in" name="role" style="flex:0 0 110px"><option value="employee">موظف</option><option value="admin">مدير</option></select>
+      <button class="btn pri sm">موافقة</button>
+      <button type="button" class="btn sm danger" onclick="App.setStatus('${safeId(p.id)}','disabled')">رفض</button>
+    </form>`).join("")}</div>` : ""}
   <div class="toolbar"><input class="in" placeholder="بحث بالاسم أو القسم..." value="${esc(q)}" oninput="App.peopleSearch(this.value)"></div>
   ${!isAdmin() ? `<p class="muted small mb">تشاهد زملاءك في قسمك فقط.</p>` : ""}
+  <div class="muted small mb">${fmtNum(all.length)} موظف</div>
   <div class="grid g3">${list.map((p) => `
-    <div class="rec" ${isAdmin() ? `onclick="App.personForm('${p.id}')"` : ""}><div class="person">${avatar(p)}
+    <div class="rec" ${isAdmin() ? `onclick="App.personForm('${safeId(p.id)}')"` : ""}><div class="person">${avatar(p)}
       <div class="sp"><div class="t">${esc(p.full_name || "بدون اسم")}</div><div class="muted small">${esc(p.job_title || "")}</div></div></div>
-      <div class="meta"><span class="badge">${esc(depName(p.department_id))}</span>${p.role === "admin" ? `<span class="badge b-green">مدير</span>` : ""}${p.phone ? `<span class="badge" dir="ltr">${esc(p.phone)}</span>` : ""}</div>
-    </div>`).join("")}</div>`;
+      <div class="meta"><span class="badge">${esc(depName(p.department_id))}</span>${p.role === "admin" ? `<span class="badge b-green">مدير</span>` : ""}${p.status === "disabled" ? `<span class="badge b-red">موقوف</span>` : ""}${p.phone ? `<span class="badge" dir="ltr">${esc(p.phone)}</span>` : ""}</div>
+    </div>`).join("")}</div>
+  ${pages > 1 ? `<div class="row mt" style="justify-content:center">
+    <button class="btn sm ghost" ${n === 0 ? "disabled" : ""} onclick="App.peoplePage(-1)">→ السابق</button>
+    <span class="muted small">صفحة ${n + 1} من ${pages}</span>
+    <button class="btn sm ghost" ${n + 1 >= pages ? "disabled" : ""} onclick="App.peoplePage(1)">التالي ←</button></div>` : ""}`;
 }
 
 // ===== Entity list =====
 function viewEntity(k) {
-  const cfg = ENT[k];
-  const q = (S.q?.[k] || "").trim();
-  const depF = S.param && S.view === k ? S.param : "";
-  let rows = (S.data[k] ?? []).filter((r) => (!depF || r.department_id === depF) && (!q || Object.values(r).join(" ").includes(q)));
-  const st = S.f?.[k] || "";
-  if (st) rows = rows.filter((r) => r[cfg.status] === st);
+  const cfg = ENT[k], st = pageState(k);
+  const depF = S.param && S.view === k ? safeId(S.param) : "";
+  if (st.dep !== depF) { st.dep = depF; st.n = 0; st.rows = null; }
+  loadPage(k);
+  const pages = Math.max(1, Math.ceil(st.total / PAGE_SIZE));
+  const pager = st.total > PAGE_SIZE ? `<div class="row mt" style="justify-content:center">
+      <button class="btn sm ghost" ${st.n === 0 ? "disabled" : ""} onclick="App.pageTo('${k}', -1)">→ السابق</button>
+      <span class="muted small">صفحة ${st.n + 1} من ${pages} · ${fmtNum(st.total)} سجل</span>
+      <button class="btn sm ghost" ${st.n + 1 >= pages ? "disabled" : ""} onclick="App.pageTo('${k}', 1)">التالي ←</button></div>` : "";
+  const rows = st.rows;
   return `
   <div class="toolbar">
-    <input class="in" placeholder="بحث..." value="${esc(q)}" oninput="App.search('${k}', this.value)">
-    ${cfg.status ? `<select class="in" style="flex:0 0 150px" onchange="App.filter('${k}', this.value)"><option value="">كل الحالات</option>${cfg.fields.find((f) => f.k === cfg.status).o.map((o) => `<option ${o === st ? "selected" : ""}>${o}</option>`).join("")}</select>` : ""}
+    <input class="in" id="searchBox" placeholder="بحث في كل السجلات..." value="${esc(st.q)}" oninput="App.search('${k}', this.value)">
+    ${cfg.status ? `<select class="in" style="flex:0 0 150px" onchange="App.filter('${k}', this.value)"><option value="">كل الحالات</option>${cfg.fields.find((f) => f.k === cfg.status).o.map((o) => `<option ${o === st.status ? "selected" : ""}>${o}</option>`).join("")}</select>` : ""}
     <button class="btn pri" onclick="App.edit('${k}')">+ ${cfg.one}</button>
   </div>
   ${depF ? `<div class="mb"><span class="badge b-blue">قسم: ${esc(depName(depF))}</span> <a href="#" onclick="App.go('${k}');return false" class="small">عرض الكل</a></div>` : ""}
-  ${rows.length ? `<div class="grid g3">${rows.map((r) => recCard(k, r)).join("")}</div>` :
-    `<div class="card empty"><div style="font-size:34px">${cfg.icon}</div>لا توجد سجلات بعد<br>
+  ${rows === null ? `<div class="card empty"><span class="spin"></span></div>` :
+    rows.length ? `<div class="muted small mb">${fmtNum(st.total)} سجل</div><div class="grid g3">${rows.map((r) => recCard(k, r)).join("")}</div>${pager}` :
+    `<div class="card empty"><div style="font-size:34px">${cfg.icon}</div>${st.q || st.status ? "لا توجد نتائج مطابقة" : "لا توجد سجلات بعد"}<br>
      <button class="btn pri mt" onclick="App.edit('${k}')">+ إضافة ${cfg.one}</button>
      ${AI_EXTRACT.includes(k) ? `<div class="small mt">أو صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات ✨</div>` : ""}</div>`}`;
 }
@@ -993,7 +1081,7 @@ function recCard(k, r) {
     if (f.exp || f.hearing || f.due || f.deadline) badges.push(`<span class="badge ${cls}">${f.l}: ${fmtDate(r[f.k])}${f.exp && d < 0 ? " (منتهي)" : ""}</span>`);
   }
   if (isAdmin()) badges.push(`<span class="badge">${esc(depName(r.department_id))}</span>`);
-  return `<div class="rec" onclick="App.edit('${k}','${r.id}')">
+  return `<div class="rec" onclick="App.edit('${k}','${safeId(r.id)}')">
     <div class="t">${esc(r[cfg.primary])}</div>
     ${cfg.sub(r) ? `<div class="muted small">${esc(cfg.sub(r))}</div>` : ""}
     ${k === "vehicles" && r.location ? `<div class="small">📍 ${esc(r.location)}</div>` : ""}
@@ -1001,6 +1089,144 @@ function recCard(k, r) {
     ${cfg.progress ? `<div class="bar"><i style="width:${r.progress || 0}%"></i></div><div class="muted small">${r.progress || 0}% · ${fmtSAR(r.contract_value)}</div>` : ""}
     <div class="meta">${badges.join("")}</div></div>`;
 }
+
+// ===== Governance: audit log, trash, WhatsApp review queue, AI usage =====
+const ENT_LABEL = { vehicles:"المركبات", invoices:"الفواتير", documents:"المستندات", legal_cases:"القضايا", projects:"المشاريع", requests:"الطلبات",
+  manager_notes:"ملاحظات المدير", departments:"الأقسام", profiles:"الموظفين", rooms:"الغرف", room_messages:"رسائل الغرف", companies:"الشركات", room_members:"أعضاء الغرف" };
+const ACT_LABEL = { insert:"إضافة", update:"تعديل", delete:"حذف نهائي", soft_delete:"نقل للسلة", restore:"استرجاع" };
+const SRC_LABEL = { web:"المنصة", ai:"الذكاء الاصطناعي", system:"النظام" };
+function viewAudit() {
+  const st = S.audit || {};
+  return `<div class="toolbar">
+      <select class="in" style="flex:0 0 170px" onchange="Gov.auditFilter('entity', this.value)"><option value="">كل الأقسام</option>${Object.entries(ENT_LABEL).map(([k, l]) => `<option value="${k}" ${st.entity === k ? "selected" : ""}>${l}</option>`).join("")}</select>
+      <select class="in" style="flex:0 0 150px" onchange="Gov.auditFilter('action', this.value)"><option value="">كل العمليات</option>${Object.entries(ACT_LABEL).map(([k, l]) => `<option value="${k}" ${st.action === k ? "selected" : ""}>${l}</option>`).join("")}</select>
+    </div>
+    <p class="muted small mb">كل تعديل أو حذف أو استرجاع يتسجل تلقائياً من قاعدة البيانات، وما أحد يقدر يعدل هذا السجل أو يحذفه.</p>
+    <div class="card" id="auditBox">${st.rows ? auditRows(st) : `<span class="spin"></span>`}</div>`;
+}
+function auditRows(st) {
+  if (!st.rows.length) return `<div class="empty">لا توجد عمليات مسجلة</div>`;
+  const who = (id) => S.people.find((p) => p.id === id)?.full_name || (id ? "مستخدم" : "النظام");
+  const changed = (r) => r.action === "update" && r.before && r.after ? Object.keys(r.after).filter((k) => JSON.stringify(r.after[k]) !== JSON.stringify(r.before[k])).filter((k) => k !== "updated_at").slice(0, 6).join("، ") : "";
+  const pages = Math.max(1, Math.ceil(st.total / PAGE_SIZE));
+  return `<table class="t">${st.rows.map((r) => `<tr>
+      <td class="small" style="white-space:nowrap">${fmtDate(r.at)}<div class="muted">${esc(new Date(r.at).toLocaleTimeString("ar-SA", { hour:"2-digit", minute:"2-digit" }))}</div></td>
+      <td><span class="badge">${esc(ACT_LABEL[r.action] || r.action)}</span> ${esc(ENT_LABEL[r.entity] || r.entity)}
+        ${changed(r) ? `<div class="muted small" dir="ltr" style="text-align:right">${esc(changed(r))}</div>` : ""}</td>
+      <td class="small">${esc(who(r.actor))}<div class="muted">${esc(SRC_LABEL[r.source] || r.source)}</div></td></tr>`).join("")}</table>
+    ${pages > 1 ? `<div class="row mt" style="justify-content:center">
+      <button class="btn sm ghost" ${st.n === 0 ? "disabled" : ""} onclick="Gov.auditPage(-1)">→ السابق</button>
+      <span class="muted small">صفحة ${st.n + 1} من ${pages}</span>
+      <button class="btn sm ghost" ${st.n + 1 >= pages ? "disabled" : ""} onclick="Gov.auditPage(1)">التالي ←</button></div>` : ""}`;
+}
+function viewTrash() {
+  const rows = S.trash;
+  return `<p class="muted small mb">العناصر المحذوفة تبقى هنا 30 يوم وتقدر تسترجعها، بعدها تنحذف نهائياً.</p>
+    <div class="card">${!rows ? `<span class="spin"></span>` : !rows.length ? `<div class="empty">السلة فاضية</div>` :
+      `<table class="t">${rows.map((r) => `<tr><td>${esc(r.label || "—")}<div class="muted small">${esc(ENT_LABEL[r.entity] || r.entity)}</div></td>
+        <td class="small">${fmtDate(r.deleted_at)}<div class="muted">${esc(S.people.find((p) => p.id === r.deleted_by)?.full_name || "")}</div></td>
+        <td style="text-align:left"><button class="btn sm" onclick="Gov.restore('${esc(r.entity)}','${safeId(r.id)}')">↺ استرجاع</button></td></tr>`).join("")}</table>`}</div>`;
+}
+const WA_STATUS = { new:"جديدة", matched:"مطابقة لموظف", unmatched:"رقم غير معروف", converted:"تم تحويلها", rejected:"مرفوضة" };
+function viewWhatsApp() {
+  const rows = S.wa;
+  return `<div class="msg mb">💬 الرسائل الواردة من الواتساب تنتظر هنا مراجعتك قبل ما تدخل في بيانات الشركة. الربط الفعلي مع واتساب يحتاج حساب WhatsApp Business من Meta (لم يُفعّل بعد).</div>
+    <div class="card">${!rows ? `<span class="spin"></span>` : !rows.length ? `<div class="empty">لا توجد رسائل بانتظار المراجعة</div>` :
+      rows.map((m) => `<div class="mb" style="border-bottom:1px solid var(--line);padding-bottom:10px">
+        <div class="row"><b class="sp">${esc(S.people.find((p) => p.id === m.profile_id)?.full_name || "")} <span class="muted small" dir="ltr">${esc(m.from_phone)}</span></b>
+          <span class="badge">${esc(WA_STATUS[m.status] || m.status)}</span></div>
+        <div class="muted small">${fmtDate(m.received_at)} · ${esc(m.msg_type)}</div>
+        ${m.body ? `<div class="mt">${esc(m.body)}</div>` : ""}${m.transcript ? `<div class="mt muted">🎤 ${esc(m.transcript)}</div>` : ""}
+        ${["new", "matched", "unmatched"].includes(m.status) ? `<div class="row mt">
+          <button class="btn sm pri" onclick="Gov.waDecide('${safeId(m.id)}','converted')">✓ تمت المعالجة</button>
+          <button class="btn sm danger" onclick="Gov.waDecide('${safeId(m.id)}','rejected')">رفض</button></div>` : ""}
+      </div>`).join("")}</div>`;
+}
+async function loadAIUsage() {
+  const box = $("#aiUsage"); if (!box) return;
+  try {
+    const u = await rpc("ai_usage_summary", { cid:S.cid });
+    const pct = u.budget_usd ? Math.min(100, Math.round((Number(u.month_spent_usd) / Number(u.budget_usd)) * 100)) : 0;
+    box.innerHTML = `<b>✨ استهلاك الذكاء الاصطناعي هذا الشهر</b>
+      <div class="bar mt"><i style="width:${pct}%"></i></div>
+      <div class="muted small">${fmtNum(u.month_requests)} طلب · $${Number(u.month_spent_usd).toFixed(2)} من $${Number(u.budget_usd ?? 0).toFixed(0)} · الحد اليومي لكل موظف ${fmtNum(u.daily_user_limit)} طلب</div>
+      ${isSuper() ? "" : `<div class="muted small">تعديل الميزانية يتم عن طريق يقين.</div>`}`;
+  } catch (err) { box.innerHTML = `<span class="muted small">تعذر تحميل الاستهلاك</span>`; }
+}
+const Gov = {
+  async audit() {
+    const st = (S.audit = S.audit || { n:0, entity:"", action:"", rows:null, total:0 });
+    let q = sb.from("audit_log").select("id,at,actor,source,action,entity,entity_id,before,after", { count:"exact" }).eq("company_id", S.cid);
+    if (st.entity) q = q.eq("entity", st.entity);
+    if (st.action) q = q.eq("action", st.action);
+    const { data, count, error } = await q.order("at", { ascending:false }).order("id", { ascending:false }).range(st.n * PAGE_SIZE, st.n * PAGE_SIZE + PAGE_SIZE - 1);
+    if (error) return toast("خطأ: " + error.message);
+    st.rows = data ?? []; st.total = count ?? 0;
+    const box = $("#auditBox"); if (box && S.view === "audit") box.innerHTML = auditRows(st);
+  },
+  auditFilter(f, v) { S.audit = { ...(S.audit || {}), [f]:v, n:0, rows:null }; renderView(); },
+  auditPage(d) { S.audit.n = Math.max(0, S.audit.n + d); S.audit.rows = null; renderView(); window.scrollTo(0, 0); },
+  async trash() {
+    try { S.trash = await rpc("list_trash", { cid:S.cid }); } catch (err) { S.trash = []; toast("خطأ: " + err.message); }
+    if (S.view === "trash") $("#content").innerHTML = viewTrash();
+  },
+  async restore(tbl, id) {
+    const { error } = await sb.rpc("restore_deleted", { tbl, rid:id });
+    if (error) return toast("خطأ: " + error.message);
+    toast("تم الاسترجاع ✅"); S.trash = null; await reload();
+  },
+  async wa() {
+    const { data, error } = await sb.from("wa_inbound").select("*").eq("company_id", S.cid).order("received_at", { ascending:false }).limit(100);
+    S.wa = error ? [] : data ?? [];
+    if (S.view === "whatsapp") $("#content").innerHTML = viewWhatsApp();
+  },
+  async waDecide(id, decision) {
+    const { error } = await sb.rpc("review_wa_message", { mid:id, decision });
+    if (error) return toast("خطأ: " + error.message);
+    await Gov.wa();
+  },
+  // notifications (H6)
+  bell() {
+    const list = S.notifs ?? [];
+    modal(`<div class="row"><h3 class="sp">🔔 التنبيهات</h3>${list.some((n) => !n.read_at) ? `<button class="btn sm" onclick="Gov.readAll()">تحديد الكل كمقروء</button>` : ""}<button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      ${list.length ? list.map((n) => `<div class="mb" style="border-bottom:1px solid var(--line);padding:8px 0;${n.read_at ? "opacity:.6" : ""}">
+        <b>${esc(n.title)}</b>${n.body ? `<div class="small">${esc(n.body)}</div>` : ""}<div class="muted small">${fmtDate(n.created_at)}</div>
+        ${n.entity && ENT[n.entity] && n.entity_id ? `<button class="btn sm mt" onclick="Gov.openNotif(${Number(n.id)})">فتح</button>` : ""}</div>`).join("")
+        : `<div class="empty">لا توجد تنبيهات</div>`}`);
+  },
+  async readAll() {
+    const ids = (S.notifs ?? []).filter((n) => !n.read_at).map((n) => n.id);
+    if (ids.length) await sb.from("notifications").update({ read_at:new Date().toISOString() }).in("id", ids);
+    await loadNotifications(); App.close(); renderShell();
+  },
+  async openNotif(id) {
+    const n = (S.notifs ?? []).find((x) => x.id === id); if (!n) return;
+    if (!n.read_at) await sb.from("notifications").update({ read_at:new Date().toISOString() }).eq("id", id);
+    await loadNotifications(); App.close(); App.go(n.entity); App.edit(n.entity, n.entity_id);
+  },
+  // platform owner
+  async events() {
+    const { data, error } = await sb.from("system_events").select("*").order("at", { ascending:false }).limit(100);
+    modal(`<div class="row"><h3 class="sp">🩺 أحداث النظام والأخطاء</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      ${error ? `<div class="msg err">${esc(error.message)}</div>` : !(data ?? []).length ? `<div class="empty">لا توجد أحداث</div>` :
+        `<table class="t">${data.map((e) => `<tr><td class="small" style="white-space:nowrap">${fmtDate(e.at)}</td>
+          <td><span class="badge ${e.level === "error" ? "b-red" : e.level === "warn" ? "b-amber" : ""}">${esc(e.level)}</span> <span class="muted small">${esc(e.source)}</span>
+          <div class="small" dir="ltr" style="text-align:right">${esc(String(e.message).slice(0, 300))}</div></td></tr>`).join("")}</table>`}`);
+  },
+  inviteForm() {
+    modal(`<div class="row"><h3 class="sp">👤 دعوة مسؤول منصة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      <p class="muted small mb">الشخص المدعو يسجل حساب جديد بنفس البريد (بدون رمز شركة) ويصير مسؤول منصة. صلاحيته كاملة على كل الشركات، فادعُ فقط من تثق فيه.</p>
+      <form onsubmit="Gov.invite(event)"><label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
+      <button class="btn pri">إرسال الدعوة</button></form>`);
+  },
+  async invite(e) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.rpc("invite_platform_admin", { invite_email:f.get("email") });
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast("تم حفظ الدعوة ✅");
+  },
+};
+window.Gov = Gov;
 
 // ===== Profile / settings =====
 function viewProfile() {
@@ -1021,10 +1247,11 @@ function viewProfile() {
     </form>
     <form class="mt" onsubmit="App.changePw(event)" style="border-top:1px solid var(--line);padding-top:16px">
       <b>🔒 تغيير كلمة المرور</b>
-      <label class="f mt"><span>كلمة المرور الجديدة</span><input class="in pw" name="password" type="password" minlength="6" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
+      <label class="f mt"><span>كلمة المرور الجديدة</span><input class="in pw" name="password" type="password" minlength="8" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
       <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار</label>
       <button class="btn">تغيير</button>
-    </form></div>`;
+    </form>
+    <div class="mt" id="mfaBox" style="border-top:1px solid var(--line);padding-top:16px"><b>🛡️ التحقق الثنائي</b><div class="muted small mt"><span class="spin"></span></div></div></div>`;
 }
 function viewSettings() {
   const s = S.settings;
@@ -1032,16 +1259,18 @@ function viewSettings() {
     <div class="card"><h3>🏷️ هوية المنصة</h3>
       <p class="muted small mb">اسم المنصة يظهر لكل موظفي الشركة، مثل: DLPS Platform</p>
       <div class="risk mb"><div class="muted small">رمز تسجيل الموظفين (أرسله لموظفينك)</div><b dir="ltr" style="font-size:20px;letter-spacing:2px">${esc(S.company?.join_code)}</b>
-        ${isSuper() ? `<div class="muted small mt">رمز تسجيل المدير: <b dir="ltr">${esc(S.company?.admin_code)}</b></div>` : ""}</div>
+        ${isSuper() ? `<div class="muted small mt">رمز تسجيل المدير: <b dir="ltr">${esc(S.company?.admin_code)}</b></div>` : ""}
+        <button class="btn sm mt" onclick="if(confirm('توليد رمز جديد؟ الرمز الحالي بيتوقف فوراً.'))App.regenCodes('${safeId(S.cid)}','join')">↻ رمز جديد</button></div>
       <div class="row mb"><div class="logo" style="width:64px;height:64px">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
         <label class="btn sm">رفع شعار الشركة<input type="file" accept="image/*" class="hidden" onchange="App.logo(this)"></label></div>
       <form onsubmit="App.saveSettings(event)">
         <label class="f"><span>اسم المنصة</span><input class="in" name="company_name" value="${esc(s.company_name)}" required></label>
         <button class="btn pri">حفظ</button>
-      </form></div>
+      </form>
+      <div id="aiUsage" class="mt" style="border-top:1px solid var(--line);padding-top:12px"><span class="spin"></span></div></div>
     <div class="card"><h3>🏢 الأقسام</h3>
       <table class="t">${S.deps.map((d) => `<tr><td style="width:36px">${esc(d.icon)}</td><td>${esc(d.name)}</td><td class="muted small">${S.people.filter((p) => p.department_id === d.id).length} موظف</td>
-        <td style="text-align:left"><button class="btn sm danger" onclick="App.delDept('${d.id}')">حذف</button></td></tr>`).join("")}</table>
+        <td style="text-align:left"><button class="btn sm danger" onclick="App.delDept('${safeId(d.id)}')">حذف</button></td></tr>`).join("")}</table>
       <form class="row mt" onsubmit="App.addDept(event)">
         <input class="in" name="icon" value="🏢" style="width:60px;text-align:center">
         <input class="in sp" name="name" placeholder="اسم قسم جديد" required>
@@ -1067,14 +1296,14 @@ function entityForm(k, r = {}) {
   modal(`
     <div class="row"><h3 class="sp">${isNew ? "إضافة " + cfg.one : "تعديل " + cfg.one}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
     ${AI_EXTRACT.includes(k) ? `<label class="btn ai full mb" id="scanBtn">📷 صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات<input type="file" accept="image/*" capture="environment" class="hidden" onchange="App.scan('${k}', this)"></label>` : ""}
-    <form id="ef" onsubmit="App.save(event,'${k}','${r.id || ""}')">
+    <form id="ef" onsubmit="App.save(event,'${k}','${safeId(r.id)}')">
       ${wide.filter((f) => f.req).map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}
       <div class="two">${narrow.map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}</div>
       ${wide.filter((f) => !f.req).map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}
       ${isAdmin() ? `<label class="f"><span>القسم المسؤول</span><select class="in" name="department_id">${S.deps.map((d) => `<option value="${d.id}" ${d.id === defDep ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>`
         : `<input type="hidden" name="department_id" value="${esc(defDep || "")}">`}
       <div class="row mt"><button class="btn pri">حفظ</button><span class="sp"></span>
-        ${!isNew && isAdmin() ? `<button type="button" class="btn danger" onclick="App.del('${k}','${r.id}')">حذف</button>` : ""}</div>
+        ${!isNew && isAdmin() ? `<button type="button" class="btn danger" onclick="App.del('${k}','${safeId(r.id)}')">حذف</button>` : ""}</div>
       ${!isNew && r.updated_at ? `<div class="muted small mt">آخر تحديث: ${fmtDate(r.updated_at)}${r.created_by ? " · أضافه " + esc(S.people.find((p) => p.id === r.created_by)?.full_name || "") : ""}</div>` : ""}
     </form>`);
 }
@@ -1093,29 +1322,36 @@ window.App = {
   companyForm(id) {
     const c = id ? S.companies.find((x) => x.id === id) : {};
     modal(`<div class="row"><h3 class="sp">${id ? "إدارة الشركة" : "شركة جديدة"}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
-      <form onsubmit="App.saveCompany(event,'${id || ""}')">
+      <form onsubmit="App.saveCompany(event,'${safeId(id)}')">
         <label class="f"><span>اسم الشركة / اسم المنصة لها</span><input class="in" name="name" value="${esc(c.name || "")}" placeholder="مثال: DLPS Platform" required></label>
         <label class="f"><span>ملاحظات داخلية (تظهر لك فقط)</span><textarea class="in" name="notes" placeholder="جهة التواصل، الباقة، تاريخ الاشتراك...">${esc(c.notes || "")}</textarea></label>
+        <div class="two">
+          <label class="f"><span>ميزانية الذكاء الاصطناعي الشهرية ($)</span><input class="in" type="number" min="0" step="1" name="ai_monthly_budget_usd" value="${esc(c.ai_monthly_budget_usd ?? 30)}" dir="ltr"></label>
+          <label class="f"><span>حد طلبات الذكاء الاصطناعي لكل موظف يومياً</span><input class="in" type="number" min="0" step="1" name="ai_daily_user_limit" value="${esc(c.ai_daily_user_limit ?? 60)}" dir="ltr"></label>
+        </div>
+        <label class="small row mb" style="gap:6px"><input type="checkbox" name="require_admin_mfa" ${c.require_admin_mfa ? "checked" : ""}> إلزام مدراء الشركة بالتحقق الثنائي (فعّله بعد ما يضيف المدير تطبيق المصادقة من ملفه الشخصي)</label>
         ${id ? `<div class="risk mb"><div class="small">رمز الموظفين: <b dir="ltr">${esc(c.join_code)}</b></div><div class="small">رمز المدير: <b dir="ltr">${esc(c.admin_code)}</b></div>
-          <button type="button" class="btn sm ghost mt" onclick="App.regenCodes('${id}')">↻ توليد رموز جديدة</button></div>` :
+          <button type="button" class="btn sm ghost mt" onclick="App.regenCodes('${safeId(id)}')">↻ توليد رموز جديدة</button></div>` :
           `<p class="muted small mb">بيتم إنشاء ٧ أقسام افتراضية للشركة، ورمزين للتسجيل.</p>`}
         <div class="row"><button class="btn pri">${id ? "حفظ" : "إنشاء الشركة"}</button><span class="sp"></span>
-          ${id ? `<button type="button" class="btn ghost" onclick="App.toggleCompany('${id}', ${!c.active})">${c.active ? "⏸ إيقاف الشركة" : "▶ تفعيل الشركة"}</button>
-          <button type="button" class="btn danger" onclick="App.delCompany('${id}')">حذف</button>` : ""}</div>
+          ${id ? `<button type="button" class="btn ghost" onclick="App.toggleCompany('${safeId(id)}', ${!c.active})">${c.active ? "⏸ إيقاف الشركة" : "▶ تفعيل الشركة"}</button>
+          ${c.deleted_at ? `<button type="button" class="btn pri" onclick="App.restoreCompany('${safeId(id)}')">↺ استرجاع الشركة</button>` : `<button type="button" class="btn danger" onclick="App.delCompany('${safeId(id)}')">حذف</button>`}` : ""}</div>
       </form>`);
   },
   async saveCompany(e, id) {
     e.preventDefault(); const f = new FormData(e.target);
-    const row = { name:f.get("name"), notes:f.get("notes") || null };
+    const row = { name:f.get("name"), notes:f.get("notes") || null,
+      ai_monthly_budget_usd:Number(f.get("ai_monthly_budget_usd") || 30), ai_daily_user_limit:Number(f.get("ai_daily_user_limit") || 60),
+      require_admin_mfa:f.get("require_admin_mfa") === "on" };
     const { data, error } = id ? await sb.from("companies").update(row).eq("id", id).select().single() : await sb.from("companies").insert(row).select().single();
     if (error) return toast("خطأ: " + error.message);
     App.close(); await reload();
     if (!id && data) App.companyForm(data.id);
   },
-  async regenCodes(id) {
-    const r = () => Math.random().toString(36).slice(2).toUpperCase();
-    const { error } = await sb.from("companies").update({ join_code:r().slice(0, 6), admin_code:(r() + r()).slice(0, 10) }).eq("id", id);
+  async regenCodes(id, which = "both") {
+    const { error } = await sb.rpc("regenerate_company_codes", { target:id, which });
     if (error) return toast("خطأ: " + error.message);
+    if (which === "join") { await reload(); return toast("تم توليد رمز موظفين جديد، الرمز القديم ما عاد يشتغل"); }
     await reload(); App.companyForm(id); toast("تم توليد رموز جديدة، الرموز القديمة ما عادت تشتغل");
   },
   async toggleCompany(id, active) {
@@ -1124,11 +1360,16 @@ window.App = {
   },
   async delCompany(id) {
     const c = S.companies.find((x) => x.id === id);
-    if (!confirm(`حذف "${c?.name}" نهائياً مع كل بياناتها وحسابات موظفيها؟ ما يمكن التراجع.`)) return;
+    if (!confirm(`حذف "${c?.name}"؟ بتتوقف الشركة فوراً، وتقدر تسترجعها خلال 30 يوم. بعدها تنحذف نهائياً مع بياناتها.`)) return;
     const { error } = await sb.rpc("delete_company", { target:id });
     if (error) return toast("خطأ: " + error.message);
     if (S.cid === id) { S.cid = null; try { localStorage.removeItem("yq_cid"); } catch {} }
     App.close(); S.view = "platform"; await reload();
+  },
+  async restoreCompany(id) {
+    const { error } = await sb.rpc("restore_company", { target:id });
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); await reload(); toast("تم استرجاع الشركة ✅");
   },
   showPw(on) { document.querySelectorAll(".pw").forEach((i) => (i.type = on ? "text" : "password")); },
   async forgot() {
@@ -1140,12 +1381,14 @@ window.App = {
   async setNewPw(e) {
     e.preventDefault(); const f = new FormData(e.target);
     const b = e.target.querySelector("button"); b.disabled = true;
+    if (String(f.get("password")).length < 8) { b.disabled = false; return renderAuth({ t:"err", m:"كلمة المرور لازم تكون 8 أحرف أو أكثر" }); }
     const { error } = await sb.auth.updateUser({ password:f.get("password") });
     if (error) { b.disabled = false; return renderAuth({ t:"err", m:error.message }); }
     S.authTab = "login"; S.recovering = false; toast("تم تغيير كلمة المرور ✅"); boot((await sb.auth.getSession()).data.session);
   },
   async changePw(e) {
     e.preventDefault(); const f = new FormData(e.target);
+    if (String(f.get("password")).length < 8) return toast("كلمة المرور لازم تكون 8 أحرف أو أكثر");
     const { error } = await sb.auth.updateUser({ password:f.get("password") });
     if (error) return toast("خطأ: " + error.message);
     e.target.reset(); toast("تم تغيير كلمة المرور ✅");
@@ -1161,9 +1404,9 @@ window.App = {
     const code = ($("#coCode")?.value || "").trim().toUpperCase();
     S.signupCode = code;
     if (!code) return;
-    const { data } = await sb.rpc("lookup_company", { code });
+    const { data, error } = await sb.rpc("lookup_company", { code });
     S.signupCo = data || null;
-    renderAuth(data ? null : { t:"err", m:"رمز الشركة غير صحيح" });
+    renderAuth(error ? { t:"err", m:error.message.includes("TOO_MANY") ? "محاولات كثيرة. انتظر 15 دقيقة ثم حاول مرة ثانية." : error.message } : data ? null : { t:"err", m:"رمز الشركة غير صحيح" });
   },
   async signup(e) {
     e.preventDefault();
@@ -1175,23 +1418,35 @@ window.App = {
     const btn = e.target.querySelector(".btn.pri"); if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spin"></span>`; }
     const email = String(f.get("email")).trim().toLowerCase();
     const code = String(f.get("company_code") || "").trim().toUpperCase();
-    if (email !== OWNER_EMAIL) {
-      if (!S.signupCo || S.signupCode !== code) { await App.checkCode(); if (!S.signupCo) return; }
-    }
+    if (code && (!S.signupCo || S.signupCode !== code)) { await App.checkCode(); if (!S.signupCo) return; }
+    if (String(f.get("password")).length < 8) return renderAuth({ t:"err", m:"كلمة المرور لازم تكون 8 أحرف أو أكثر" });
     const { data, error } = await sb.auth.signUp({ email, password:f.get("password"),
-      options:{ emailRedirectTo:location.origin + location.pathname, data:{ full_name:f.get("full_name"), company_code:code, department_id:f.get("department_id"), job_title:f.get("job_title"), phone:f.get("phone") } } });
-    if (error) return renderAuth({ t:"err", m:error.message.includes("registered") ? "هذا البريد مسجل مسبقاً" : error.message.includes("Database error") ? "رمز الشركة غير صحيح" : error.message });
-    if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب ✅ افتح رابط التفعيل اللي وصلك على بريدك. لو فتح لك صفحة خطأ عادي، التفعيل تم. ارجع هنا وسجّل دخولك." }); }
+      options:{ emailRedirectTo:location.origin + location.pathname, data:{ full_name:f.get("full_name"), company_code:code, job_title:f.get("job_title"), phone:f.get("phone") } } });
+    if (error) return renderAuth({ t:"err", m:error.message.includes("registered") ? "هذا البريد مسجل مسبقاً" : error.message.includes("Database error") ? "رمز الشركة غير صحيح (أو لا توجد دعوة لهذا البريد)" : error.message });
+    if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب ✅ فعّل حسابك من الرابط اللي وصلك على بريدك، ثم سجّل دخولك. بعدها ينتظر حسابك موافقة مدير الشركة." }); }
   },
   async logout() { try { localStorage.removeItem("yq_cid"); } catch {} S.cid = null; S.company = null; S.brief = null; S.chat = []; S.view = "home"; await sb.auth.signOut(); },
   menu(o) { $("#side")?.classList.toggle("open", o); $("#ov")?.classList.toggle("open", o); },
   go(v, param = null) { if (v !== "room" || param !== Room.id) Room.leave(); S.view = v; S.param = param; renderShell(); window.scrollTo(0, 0); },
   close() { $("#modal-root").innerHTML = ""; },
-  search(k, v) { S.q = { ...(S.q || {}), [k]:v }; renderView(); const i = document.querySelector(".toolbar .in"); i.focus(); i.setSelectionRange(v.length, v.length); },
-  filter(k, v) { S.f = { ...(S.f || {}), [k]:v }; renderView(); },
-  peopleSearch(v) { S.peopleQ = v; renderView(); const i = document.querySelector(".toolbar .in"); i.focus(); i.setSelectionRange(v.length, v.length); },
+  search(k, v) {
+    clearTimeout(S.searchT);
+    S.searchT = setTimeout(() => {
+      const st = pageState(k); st.q = v; st.n = 0; renderView();
+      const i = $("#searchBox"); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); }
+    }, 350);
+  },
+  filter(k, v) { const st = pageState(k); st.status = v; st.n = 0; renderView(); },
+  pageTo(k, d) { const st = pageState(k); st.n = Math.max(0, st.n + d); renderView(); window.scrollTo(0, 0); },
+  peoplePage(d) { S.peopleN = Math.max(0, (S.peopleN || 0) + d); renderView(); window.scrollTo(0, 0); },
+  peopleSearch(v) { S.peopleQ = v; S.peopleN = 0; renderView(); const i = document.querySelector(".toolbar .in"); i.focus(); i.setSelectionRange(v.length, v.length); },
 
-  edit(k, id) { entityForm(k, id ? (S.data[k] ?? []).find((r) => r.id === id) : {}); },
+  async edit(k, id) {
+    if (!id) return entityForm(k, {});
+    const r = await getRecord(k, safeId(id));
+    if (!r) return toast("السجل غير موجود أو محذوف");
+    entityForm(k, r);
+  },
   async save(e, k, id) {
     e.preventDefault();
     const fd = new FormData(e.target), row = {};
@@ -1205,10 +1460,10 @@ window.App = {
     App.close(); toast("تم الحفظ ✅"); await reload();
   },
   async del(k, id) {
-    if (!confirm("متأكد من الحذف؟")) return;
-    const { error } = await sb.from(k).delete().eq("id", id);
+    if (!confirm("نقل السجل إلى سلة المحذوفات؟ تقدر تسترجعه خلال 30 يوم.")) return;
+    const { error } = await sb.rpc("soft_delete", { tbl:k, rid:id });
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم الحذف"); await reload();
+    App.close(); toast("نُقل إلى سلة المحذوفات"); await reload();
   },
   async scan(k, input) {
     const file = input.files[0]; if (!file) return;
@@ -1256,7 +1511,11 @@ window.App = {
         <label class="f"><span>المطلوب قبل (اختياري)</span><input class="in" type="date" name="due_date"></label>
         <button class="btn pri">إرسال للقسم</button></form>`);
   },
-  noteFromAI(dep, title, why) { App.noteForm(dep, title, why); },
+  noteFromAI(i) {
+    const a = (S.brief?.actions ?? [])[Number(i)]; if (!a) return;
+    App.noteForm(depByName(a.department) || "", String(a.title || ""), String(a.why || ""));
+  },
+  askSuggested(i) { const q = SUGGEST[Number(i)]; if (q) App.ask(q); },
   async saveNote(e) {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.from("manager_notes").insert({ company_id:S.cid, department_id:f.get("department_id"), subject:f.get("subject") || null, body:f.get("body"), due_date:f.get("due_date") || null });
@@ -1264,16 +1523,16 @@ window.App = {
     App.close(); toast("تم إرسال الملاحظة ✅"); await reload();
   },
   replyForm(id) {
-    const n = S.data.manager_notes.find((x) => x.id === id);
+    const n = (S.notes ?? []).find((x) => x.id === id); if (!n) return;
     modal(`<div class="row"><h3 class="sp">💬 الرد على الملاحظة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
       <div class="risk mb">${esc(n.body)}</div>
-      <form onsubmit="App.saveReply(event,'${id}')">
+      <form onsubmit="App.saveReply(event,'${safeId(id)}')">
         <label class="f"><span>ردك</span><textarea class="in" name="reply" id="replyTxt" required>${esc(n.reply || "")}</textarea></label>
         <div class="row"><button class="btn pri">إرسال الرد</button>
-          <button type="button" class="btn ai" id="draftBtn" onclick="App.draftReply('${id}')">✨ اقترح رد</button></div></form>`);
+          <button type="button" class="btn ai" id="draftBtn" onclick="App.draftReply('${safeId(id)}')">✨ اقترح رد</button></div></form>`);
   },
   async draftReply(id) {
-    const n = S.data.manager_notes.find((x) => x.id === id), b = $("#draftBtn");
+    const n = (S.notes ?? []).find((x) => x.id === id), b = $("#draftBtn"); if (!n) return;
     b.disabled = true; b.innerHTML = `<span class="spin"></span>`;
     try { const { text } = await ai({ mode:"note_reply", note:(n.subject ? n.subject + ": " : "") + n.body }); $("#replyTxt").value = text; }
     catch (err) { toast(err.message); }
@@ -1286,20 +1545,28 @@ window.App = {
     App.close(); toast("تم إرسال الرد ✅"); await reload();
   },
   async noteStatus(id, status) { await sb.from("manager_notes").update({ status }).eq("id", id); await reload(); },
-  async delNote(id) { if (!confirm("حذف الملاحظة؟")) return; await sb.from("manager_notes").delete().eq("id", id); await reload(); },
+  async delNote(id) {
+    if (!confirm("نقل الملاحظة إلى سلة المحذوفات؟")) return;
+    const { error } = await sb.rpc("soft_delete", { tbl:"manager_notes", rid:id });
+    if (error) return toast("خطأ: " + error.message);
+    await reload();
+  },
 
   personForm(id) {
     const p = S.people.find((x) => x.id === id); if (!p) return;
     modal(`<div class="row"><h3 class="sp">بيانات الموظف</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
       <div class="row mb">${avatar(p, "lg")}<div><b>${esc(p.full_name)}</b><div class="muted small">${esc(p.email)}</div><div class="muted small">انضم ${fmtDate(p.created_at)}</div></div></div>
-      <form onsubmit="App.savePerson(event,'${id}')">
+      <form onsubmit="App.savePerson(event,'${safeId(id)}')">
         <label class="f"><span>الاسم</span><input class="in" name="full_name" value="${esc(p.full_name)}"></label>
         <div class="two"><label class="f"><span>المسمى</span><input class="in" name="job_title" value="${esc(p.job_title)}"></label>
         <label class="f"><span>الجوال</span><input class="in" name="phone" value="${esc(p.phone)}" dir="ltr"></label></div>
         <div class="two"><label class="f"><span>القسم</span><select class="in" name="department_id"><option value="">بدون قسم</option>${S.deps.map((d) => `<option value="${d.id}" ${d.id === p.department_id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>
         <label class="f"><span>الصلاحية</span><select class="in" name="role" ${p.id === S.me.id ? "disabled" : ""}><option value="employee" ${p.role === "employee" ? "selected" : ""}>موظف</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مدير (وصول كامل)</option></select></label></div>
         <div class="row mt"><button class="btn pri">حفظ</button><span class="sp"></span>
-          ${p.id !== S.me.id ? `<button type="button" class="btn danger" onclick="App.delUser('${id}')">🗑 حذف المستخدم</button>` : ""}</div>
+          ${p.id !== S.me.id ? (p.status === "disabled"
+            ? `<button type="button" class="btn" onclick="App.setStatus('${safeId(id)}','active')">▶ إعادة تفعيل</button>`
+            : `<button type="button" class="btn" onclick="App.setStatus('${safeId(id)}','disabled')">⏸ إيقاف الحساب</button>`) +
+            `<button type="button" class="btn danger" onclick="App.delUser('${safeId(id)}')">🗑 حذف المستخدم</button>` : ""}</div>
       </form>`);
   },
   async savePerson(e, id) {
@@ -1309,6 +1576,19 @@ window.App = {
     const { error } = await sb.from("profiles").update(row).eq("id", id);
     if (error) return toast("خطأ: " + error.message);
     App.close(); toast("تم الحفظ ✅"); await reload();
+  },
+  async approve(e, id) {
+    e.preventDefault(); const f = new FormData(e.target);
+    const { error } = await sb.rpc("approve_member", { target:id, dept:f.get("dept"), new_role:f.get("role") || "employee" });
+    if (error) return toast("خطأ: " + error.message);
+    toast("تم تفعيل الحساب ✅"); await reload();
+  },
+  async setStatus(id, st) {
+    const p = S.people.find((x) => x.id === id);
+    if (st === "disabled" && !confirm(`إيقاف حساب ${p?.full_name || ""}؟ ما يقدر يدخل لين تعيد تفعيله.`)) return;
+    const { error } = await sb.rpc("set_member_status", { target:id, new_status:st });
+    if (error) return toast("خطأ: " + error.message);
+    App.close(); toast(st === "active" ? "تم التفعيل ✅" : "تم إيقاف الحساب"); await reload();
   },
   async delUser(id) {
     const p = S.people.find((x) => x.id === id);
@@ -1337,10 +1617,10 @@ window.App = {
     if (id && !can) {
       return modal(`<div class="row"><h3 class="sp">أعضاء الغرفة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
         <div class="list">${roomMembers(id).map(personRow).join("")}</div>
-        <button class="btn danger mt" onclick="App.leaveRoom('${id}')">مغادرة الغرفة</button>`);
+        <button class="btn danger mt" onclick="App.leaveRoom('${safeId(id)}')">مغادرة الغرفة</button>`);
     }
     modal(`<div class="row"><h3 class="sp">${id ? "إدارة الغرفة" : "🗣️ غرفة عمليات جديدة"}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
-      <form onsubmit="App.saveRoom(event,'${id || ""}')">
+      <form onsubmit="App.saveRoom(event,'${safeId(id)}')">
         <label class="f"><span>موضوع الغرفة</span><input class="in" name="title" value="${esc(r.title || "")}" placeholder="مثال: تعطل الرافعة في موقع أبقيق" required></label>
         <label class="f"><span>وصف مختصر (اختياري)</span><textarea class="in" name="description" style="min-height:60px">${esc(r.description || "")}</textarea></label>
         <div class="f"><span class="muted small">الأعضاء (${people.length ? "اختر الموظفين المعنيين" : "ما فيه موظفين آخرين في الشركة للحين"})</span>
@@ -1348,8 +1628,8 @@ window.App = {
           <div id="pickList" style="max-height:260px;overflow-y:auto;margin-top:6px">${people.map((p) => `
             <label class="pick"><input type="checkbox" name="m" value="${p.id}" ${memIds.has(p.id) ? "checked" : ""}>${avatar(p)}<div><b>${esc(p.full_name)}</b><div class="muted small">${esc(depName(p.department_id))}${p.job_title ? " · " + esc(p.job_title) : ""}</div></div></label>`).join("")}</div></div>
         <div class="row mt"><button class="btn pri">${id ? "حفظ" : "إنشاء الغرفة"}</button><span class="sp"></span>
-          ${id ? `<button type="button" class="btn ghost" onclick="App.roomStatus('${id}','${r.status === "مفتوحة" ? "مغلقة" : "مفتوحة"}')">${r.status === "مفتوحة" ? "🔒 إغلاق الغرفة" : "🔓 فتح الغرفة"}</button>
-            <button type="button" class="btn danger" onclick="App.delRoom('${id}')">حذف</button>` : ""}</div>
+          ${id ? `<button type="button" class="btn ghost" onclick="App.roomStatus('${safeId(id)}','${r.status === "مفتوحة" ? "مغلقة" : "مفتوحة"}')">${r.status === "مفتوحة" ? "🔒 إغلاق الغرفة" : "🔓 فتح الغرفة"}</button>
+            <button type="button" class="btn danger" onclick="App.delRoom('${safeId(id)}')">حذف</button>` : ""}</div>
       </form>`);
   },
   async saveRoom(e, id) {
@@ -1434,11 +1714,80 @@ window.App = {
   },
 };
 
+// ===== M5: two-factor authentication (TOTP, e.g. Google Authenticator / Microsoft Authenticator) =====
+const MFA = {
+  async factors() { const { data } = await sb.auth.mfa.listFactors(); return (data?.totp ?? []).filter((f) => f.status === "verified"); },
+  async box() {
+    const el = $("#mfaBox"); if (!el) return;
+    const f = await MFA.factors();
+    el.innerHTML = `<b>🛡️ التحقق الثنائي</b>` + (f.length
+      ? `<div class="msg ok mt">مفعّل ✅ عند الدخول بنطلب منك رمز من تطبيق المصادقة.</div><button class="btn sm danger mt" onclick="MFA.remove('${safeId(f[0].id)}')">إلغاء التحقق الثنائي</button>`
+      : `<p class="muted small mt">يحمي حسابك لو انسرقت كلمة المرور. تحتاج تطبيق مصادقة في جوالك (Google Authenticator أو Microsoft Authenticator).${isAdmin() ? " <b>ننصح فيه بقوة لحسابات المدراء.</b>" : ""}</p>
+         <button class="btn sm mt" onclick="MFA.enroll()">تفعيل التحقق الثنائي</button>`);
+  },
+  async enroll() {
+    const old = (await sb.auth.mfa.listFactors()).data?.all ?? [];
+    for (const x of old.filter((x) => x.status !== "verified")) await sb.auth.mfa.unenroll({ factorId:x.id });
+    const { data, error } = await sb.auth.mfa.enroll({ factorType:"totp", friendlyName:"Yaqen " + new Date().toISOString().slice(0, 10) });
+    if (error) return toast("خطأ: " + error.message);
+    modal(`<div class="row"><h3 class="sp">🛡️ تفعيل التحقق الثنائي</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      <p class="small">1) افتح تطبيق المصادقة وامسح الرمز:</p>
+      <div style="background:#fff;padding:10px;border-radius:12px;width:200px;margin:10px auto"><img src="${esc(data.totp.qr_code)}" style="width:180px;height:180px"></div>
+      <p class="muted small">أو اكتب المفتاح يدوياً: <b dir="ltr">${esc(data.totp.secret)}</b></p>
+      <form onsubmit="MFA.verifyEnroll(event,'${safeId(data.id)}')"><label class="f"><span>2) اكتب الرمز المكوّن من 6 أرقام</span>
+        <input class="in" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required dir="ltr"></label>
+        <button class="btn pri">تأكيد</button></form>`);
+  },
+  async verifyEnroll(e, factorId) {
+    e.preventDefault(); const code = new FormData(e.target).get("code");
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId, code });
+    if (error) return toast("الرمز غير صحيح، جرّب الرمز الجديد");
+    App.close(); toast("تم تفعيل التحقق الثنائي ✅"); MFA.box();
+  },
+  async remove(factorId) {
+    if (!confirm("إلغاء التحقق الثنائي؟ حسابك بيصير محمي بكلمة المرور فقط.")) return;
+    const { error } = await sb.auth.mfa.unenroll({ factorId });
+    if (error) return toast(error.message.includes("aal2") ? "سجّل خروج وادخل مرة ثانية برمز التحقق، ثم ألغِه" : "خطأ: " + error.message);
+    toast("تم الإلغاء"); MFA.box();
+  },
+  // login step-up: boot calls this when the account has a verified factor but this session is aal1
+  challenge(factorId, message) {
+    $("#app").innerHTML = `<div class="auth"><div class="auth-card"><div style="font-size:40px;text-align:center">🛡️</div>
+      <p class="mt mb">اكتب الرمز من تطبيق المصادقة في جوالك</p>
+      <form onsubmit="MFA.verifyLogin(event,'${safeId(factorId)}')">
+        <input class="in mb" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required dir="ltr" autofocus>
+        <button class="btn pri full">دخول</button></form>
+      ${message ? `<div class="msg err">${esc(message)}</div>` : ""}
+      <button class="btn ghost full mt" onclick="App.logout()">تسجيل الخروج</button>
+      <div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div></div></div>`;
+  },
+  async verifyLogin(e, factorId) {
+    e.preventDefault(); const code = new FormData(e.target).get("code");
+    const b = e.target.querySelector("button"); b.disabled = true;
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId, code });
+    if (error) return MFA.challenge(factorId, "الرمز غير صحيح أو انتهت صلاحيته");
+    boot((await sb.auth.getSession()).data.session);
+  },
+};
+window.MFA = MFA;
+
 // ===== Boot =====
 async function boot(session) {
   S.session = session;
   if (!session) { await loadPublic(); return renderAuth(); }
   $("#app").innerHTML = `<div class="auth"><span class="spin" style="width:32px;height:32px;color:var(--green)"></span></div>`;
+  let acct = null;
+  try { acct = await rpc("my_account"); } catch (err) { reportError(err?.message || err, { at:"my_account" }); }
+  if (!acct) return blocked("ما قدرنا نلقى ملفك في المنصة. تواصل مع مدير شركتك.");
+  if (acct.status === "pending") return blocked(`تم إنشاء حسابك في ${acct.company_name || "الشركة"} ✅ وهو الحين بانتظار موافقة مدير الشركة. بيحدد قسمك ويفعّل حسابك، بعدها تقدر تدخل.`, "⏳");
+  if (acct.status === "disabled") return blocked("حسابك موقوف حالياً. تواصل مع مدير شركتك.");
+  // M5: an account with a verified authenticator must enter the code before using the platform
+  const { data:aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+    const f = await MFA.factors();
+    if (f.length) return MFA.challenge(f[0].id);
+  }
+  S.mfaNeeded = !!acct.mfa_required && acct.aal !== "aal2" && aal?.currentLevel !== "aal2";
   await loadMe();
   if (!S.me) return blocked("ما قدرنا نلقى ملفك في المنصة. تواصل مع مدير شركتك.");
   if (isSuper()) {
@@ -1453,8 +1802,8 @@ async function boot(session) {
   if (!S.company) return blocked("حساب شركتك موقوف حالياً. تواصل مع مدير شركتك أو مع يقين.");
   renderShell();
 }
-function blocked(m) {
-  $("#app").innerHTML = `<div class="auth"><div class="auth-card" style="text-align:center"><div style="font-size:40px">⏸</div><p class="mt">${esc(m)}</p>
+function blocked(m, icon = "⏸") {
+  $("#app").innerHTML = `<div class="auth"><div class="auth-card" style="text-align:center"><div style="font-size:40px">${esc(icon)}</div><p class="mt">${esc(m)}</p>
     <button class="btn mt" onclick="App.logout()">تسجيل الخروج</button><div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div></div></div>`;
 }
 let started = false;

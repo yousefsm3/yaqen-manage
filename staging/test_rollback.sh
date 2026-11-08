@@ -9,9 +9,7 @@ for f in $(ls "$ROOT"/supabase/rollback/*.down.sql | sort -r); do
   echo "rolled back $(basename "$f")"
 done
 echo "policies after full rollback: $($PG -A -t -c "select count(*) from pg_policies where schemaname in ('public','storage')") (baseline = 56)"
-for f in "$ROOT"/supabase/migrations/2026110801*.sql "$ROOT"/supabase/migrations/2026110802*.sql "$ROOT"/supabase/migrations/2026110803*.sql \
-         "$ROOT"/supabase/migrations/2026110804*.sql "$ROOT"/supabase/migrations/2026110805*.sql "$ROOT"/supabase/migrations/2026110806*.sql \
-         "$ROOT"/supabase/migrations/2026110807*.sql; do
+for f in $(ls "$ROOT"/supabase/migrations/*.sql | grep -v 20261108000000_baseline); do
   $PG -f "$f" 2>&1 | grep -v NOTICE || true
   echo "re-applied $(basename "$f")"
 done
