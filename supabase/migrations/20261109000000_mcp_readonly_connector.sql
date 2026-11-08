@@ -7,8 +7,16 @@
 -- 1. OAuth tokens are read-only, enforced by the database (gap G1)
 ------------------------------------------------------------------------------------------------
 -- A token issued by Supabase's OAuth server to an AI client carries a client_id claim. Such a token must never write.
-create or replace function public.is_oauth_request() returns boolean language sql stable set search_path = '' as $$
-  select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ? 'client_id', false) $$;
+-- Detected two independent ways, so the block does not depend on one claim being present:
+--   the token carries client_id, OR its session row in auth.sessions was created by an OAuth client (oauth_client_id).
+create or replace function public.is_oauth_request() returns boolean language plpgsql stable security definer set search_path = '' as $$
+declare c jsonb := coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb); sid uuid;
+begin
+  if c ? 'client_id' then return true; end if;
+  begin sid := nullif(c ->> 'session_id', '')::uuid; exception when others then return false; end;
+  return sid is not null and exists (select 1 from auth.sessions s where s.id = sid and s.oauth_client_id is not null);
+end $$;
+grant execute on function public.is_oauth_request() to anon, authenticated, service_role;
 
 -- (a) PostgREST pre-request hook: an OAuth token may only send GET/HEAD (GET = read-only transaction in PostgREST).
 create or replace function public.pre_request() returns void language plpgsql stable set search_path = '' as $$

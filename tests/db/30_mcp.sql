@@ -153,6 +153,10 @@ select qa.expect_true('MCP-E','OAuth token: write RPC (soft_delete) via POST ref
 select qa.expect_true('MCP-E','OAuth token: GET allowed by hook', pg_temp.r(:A1, $$select set_config('request.method', 'GET', true) || coalesce(public.pre_request()::text, 'ok')$$) not like 'BLOCKED%');
 select qa.expect('MCP-E','normal (non-OAuth) token: admin can still update (no regression)', pg_temp.r(:A1, $$with x as (update public.vehicles set notes = 'ok' where id = '00000000-0000-0000-0000-00000000c001' returning 1) select count(*)::text from x$$, false), '1');
 select qa.expect_true('MCP-E','normal token: POST allowed by hook', pg_temp.r(:A1, $$select set_config('request.method', 'POST', true) || coalesce(public.pre_request()::text, 'ok')$$, false) not like 'BLOCKED%');
+-- OAuth detected from the session row even if the token lacks client_id
+insert into auth.sessions (id, user_id, oauth_client_id) values ('00000000-0000-0000-5e55-0000000aa0a1','00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000c1e7');
+select qa.expect_blocked('MCP-E','OAuth session without client_id claim: UPDATE still blocked', qa.run(:A1, $$with x as (update public.vehicles set notes = 'y' where id = '00000000-0000-0000-0000-00000000c001' returning 1) select count(*)::text from x$$, '10.0.0.1', 'aal1', '{"session_id":"00000000-0000-0000-5e55-0000000aa0a1"}'));
+select qa.expect_true('MCP-E','OAuth session without client_id claim: POST refused by hook', qa.run(:A1, $$select set_config('request.method', 'POST', true) || public.pre_request()::text$$, '10.0.0.1', 'aal1', '{"session_id":"00000000-0000-0000-5e55-0000000aa0a1"}') like '%OAUTH_READ_ONLY%');
 -- usage log + rate limit are server-only
 select qa.expect_blocked('MCP-E','user cannot call mcp_begin', pg_temp.r(:A1, $$select public.mcp_begin('00000000-0000-0000-0000-0000000000a1', 'x')::text$$));
 select qa.expect_blocked('MCP-E','user cannot write usage log', pg_temp.r(:A1, $$with x as (insert into public.mcp_usage(user_id, tool) values ('00000000-0000-0000-0000-0000000000a1', 'x') returning 1) select count(*)::text from x$$, false));
