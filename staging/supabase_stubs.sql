@@ -32,6 +32,13 @@ create table if not exists auth.sessions (
   oauth_client_id uuid,
   scopes text
 );
+-- mirrors auth.oauth_clients (Supabase OAuth 2.1 server): the Claude page reads the client name
+create table if not exists auth.oauth_clients (
+  id uuid primary key default gen_random_uuid(),
+  client_name text,
+  created_at timestamptz default now(),
+  deleted_at timestamptz
+);
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticator') then create role authenticator noinherit; end if;
 end $$;

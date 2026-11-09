@@ -91,6 +91,21 @@ test("B3 revoked session -> tool refused immediately (token still cryptographica
   assert.equal(r.isError, true);
   assert.equal(r.structuredContent.error, "SESSION_REVOKED");
 });
+test("B5 manager controls from the Claude page reach Claude with a clear Arabic message", async () => {
+  const B0 = "00000000-0000-0000-0000-0000000000b0";
+  const all = "array['overview','projects','invoices','fleet','expiring','people','search','notes_rooms','comparison']";
+  await psql(`insert into public.mcp_settings (company_id, enabled, scopes) values ('${B0}', true, array['overview']) on conflict (company_id) do update set enabled = true, scopes = array['overview'];`);
+  let r = await tool("yaqen_invoices", {}, IDS.B1);
+  assert.equal(r.isError, true);
+  assert.equal(r.structuredContent.error, "SCOPE_DISABLED");
+  assert.match(r.structuredContent.message_ar, /الربط مع Claude/);
+  assert.equal((await tool("yaqen_company_overview", {}, IDS.B1)).isError, false);
+  await psql(`update public.mcp_settings set enabled = false where company_id = '${B0}';`);
+  r = await tool("yaqen_company_overview", {}, IDS.B1);
+  assert.equal(r.structuredContent.error, "DISABLED_BY_ADMIN");
+  await psql(`update public.mcp_settings set enabled = true, scopes = ${all} where company_id = '${B0}';`);
+  assert.equal((await tool("yaqen_invoices", {}, IDS.B1)).isError, false);
+});
 test("B4 pending account, platform admin, anonymous-role token", async () => {
   assert.equal((await tool("yaqen_company_overview", {}, IDS.A3)).structuredContent.error, "ACCOUNT_INACTIVE");
   assert.equal((await tool("yaqen_company_overview", {}, IDS.OWNER)).structuredContent.error, "PLATFORM_ADMIN_NOT_SUPPORTED");

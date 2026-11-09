@@ -528,14 +528,14 @@ function navItems() {
     { v:"people", i:"👥", l:"الموظفين", c:isAdmin() ? pending : 0 },
     { sec:"العمليات" },
     ...Object.entries(ENT).map(([k, c]) => ({ v:k, i:c.icon, l:c.title, c:cnt(k) })),
-    ...(isAdmin() ? [{ sec:"الحوكمة" }, { v:"audit", i:"🧾", l:"سجل التدقيق" }, { v:"trash", i:"🗑️", l:"سلة المحذوفات" }, { v:"whatsapp", i:"💬", l:"رسائل الواتساب" }] : []),
+    ...(isAdmin() ? [{ sec:"الحوكمة" }, { v:"claude", i:"🔗", l:"الربط مع Claude" }, { v:"audit", i:"🧾", l:"سجل التدقيق" }, { v:"trash", i:"🗑️", l:"سلة المحذوفات" }, { v:"whatsapp", i:"💬", l:"رسائل الواتساب" }] : []),
     { sec:"الحساب" },
     { v:"profile", i:"👤", l:"ملفي الشخصي" },
     ...(isAdmin() ? [{ v:"settings", i:"⚙️", l:"إعدادات الشركة" }] : []),
   ];
 }
 function titleOf(v) {
-  return ({ platform:"لوحة يقين", rooms:"غرف العمليات", room:(S.rooms ?? []).find((r) => r.id === S.param)?.title ?? "غرفة عمليات", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", audit:"سجل التدقيق", assistant:"المساعد التنفيذي", trash:"سلة المحذوفات", whatsapp:"رسائل الواتساب", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
+  return ({ platform:"لوحة يقين", rooms:"غرف العمليات", room:(S.rooms ?? []).find((r) => r.id === S.param)?.title ?? "غرفة عمليات", home:"لوحة القيادة", ai:"مساعد يقين الذكي", notes:"ملاحظات المدير", departments:isAdmin() ? "الأقسام" : "قسمي", people:"الموظفين", profile:"ملفي الشخصي", settings:"إعدادات المنصة", audit:"سجل التدقيق", assistant:"المساعد التنفيذي", claude:"الربط مع Claude", trash:"سلة المحذوفات", whatsapp:"رسائل الواتساب", dept:depName(S.param) })[v] ?? ENT[v]?.title ?? "";
 }
 function renderShell() {
   const s = S.settings, me = S.me;
@@ -590,6 +590,7 @@ function renderView() {
   else if (v === "people") c.innerHTML = viewPeople();
   else if (v === "profile") { c.innerHTML = viewProfile(); MFA.box(); }
   else if (v === "settings") { c.innerHTML = viewSettings(); loadAIUsage(); }
+  else if (v === "claude") { S.claude = null; c.innerHTML = viewClaude(); Claude.load(); }
   else if (v === "audit") { c.innerHTML = viewAudit(); Gov.audit(); }
   else if (v === "trash") { c.innerHTML = viewTrash(); Gov.trash(); }
   else if (v === "whatsapp") { c.innerHTML = viewWhatsApp(); Gov.wa(); }
@@ -1309,6 +1310,100 @@ async function loadAIUsage() {
       ${isSuper() ? "" : `<div class="muted small">تعديل الميزانية يتم عن طريق يقين.</div>`}`;
   } catch (err) { box.innerHTML = `<span class="muted small">تعذر تحميل الاستهلاك</span>`; }
 }
+// ===== Claude page: the manager connects Claude to Yaqen and controls what it may read (read-only connector) =====
+const MCP_URL = SUPABASE_URL + "/functions/v1/yaqen-mcp";
+const CLAUDE_SCOPES = [
+  ["overview", "ملخص الشركة", "الأعداد والمستحقات والتنبيهات العاجلة"],
+  ["projects", "المشاريع", "الحالة ونسبة الإنجاز وأيام التأخير وقيمة العقد"],
+  ["invoices", "الفواتير", "المبالغ والاستحقاق والمتأخرات والتقادم"],
+  ["comparison", "مقارنة الفترات", "الفواتير الصادرة والواردة بين فترتين ونسبة التغير"],
+  ["fleet", "المعدات والمركبات", "الحالة والموقع وتواريخ الاستمارة والتأمين"],
+  ["expiring", "الوثائق والانتهاءات", "ما ينتهي قريباً: وثائق، تأمين، رخص، جلسات قضايا"],
+  ["people", "الموظفون", "الأسماء والمسميات والأقسام، بدون جوال أو بريد"],
+  ["notes_rooms", "الملاحظات والغرف", "الملاحظات المفتوحة ونشاط الغرف، بدون نصوص الرسائل"],
+  ["search", "البحث", "يبحث فقط داخل الأنواع المسموحة أعلاه"],
+];
+const CLAUDE_TOOL_AR = { yaqen_company_overview:"ملخص الشركة", yaqen_projects:"المشاريع", yaqen_project_detail:"تفاصيل مشروع",
+  yaqen_invoices:"الفواتير", yaqen_fleet:"المعدات", yaqen_expiring:"الانتهاءات", yaqen_people:"الموظفون", yaqen_search:"البحث",
+  yaqen_notes_rooms:"الملاحظات والغرف", yaqen_invoice_period_comparison:"مقارنة الفترات" };
+const CLAUDE_ERR_AR = { SCOPE_DISABLED:"غير مسموح", DISABLED_BY_ADMIN:"الربط موقوف", SESSION_EXPIRED:"انتهى", SESSION_REVOKED:"ملغى",
+  RATE_LIMITED_MINUTE:"تجاوز الحد", RATE_LIMITED_DAY:"تجاوز الحد اليومي", ACCOUNT_INACTIVE:"حساب غير مفعّل" };
+function viewClaude() {
+  const d = S.claude;
+  if (d === undefined || d === null) return `<div class="card"><span class="spin"></span></div>`;
+  if (d.unavailable) return `<div class="msg">🔗 ربط Claude غير مفعّل على الخادم بعد. تواصل مع يقين لتفعيله.</div>`;
+  const st = d.settings, on = st.enabled, sc = new Set(st.scopes);
+  const conns = d.connections ?? [], u = d.usage ?? {};
+  const steps = ["في Claude افتح <b>الإعدادات ← Connectors</b>", "اضغط <b>Add custom connector</b> والصق رابط يقين", "اضغط <b>Connect</b> وسجّل دخولك بحسابك في يقين", "اضغط <b>موافقة (قراءة فقط)</b> وارجع لـ Claude"];
+  return `
+  <div class="card mb" style="border-color:${on ? "var(--green)" : "var(--line)"}">
+    <div class="row"><h3 class="sp" style="margin:0">🔗 اسأل Claude عن شركتك</h3>
+      <span class="badge ${on ? "b-green" : "b-red"}">${on ? "مفعّل" : "موقوف"}</span></div>
+    <p class="muted small mt">كل مدير أو موظف يربط حسابه في Claude، ويسأل بالعربي عن المشاريع والفواتير والمعدات. يقرأ فقط ما تسمح به هنا وما تسمح به صلاحيات المستخدم في يقين. لا يقدر يضيف أو يعدّل أو يحذف أي شيء، والتكلفة على اشتراك المستخدم في Claude.</p>
+    <div class="mt"><div class="muted small">رابط الموصل</div>
+      <div class="row" style="gap:8px"><code dir="ltr" class="sp" style="background:var(--panel2);padding:8px 10px;border-radius:8px;font-size:12px;overflow-wrap:anywhere">${esc(MCP_URL)}</code>
+        <button class="btn sm" onclick="Claude.copy()">نسخ</button></div></div>
+    <ol class="small mt" style="padding-inline-start:20px;line-height:2">${steps.map((x) => `<li>${x}</li>`).join("")}</ol>
+  </div>
+  <div class="grid g2 mb">
+    <div class="card"><h3>🛡️ وش يقدر Claude يقرأ</h3>
+      <label class="row mb" style="gap:8px"><input type="checkbox" id="cl_on" ${on ? "checked" : ""}> <b>تفعيل الربط مع Claude لكل الشركة</b></label>
+      ${CLAUDE_SCOPES.map(([k, l, dsc]) => `<label class="row" style="gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line)">
+        <input type="checkbox" name="cl_scope" value="${k}" ${sc.has(k) ? "checked" : ""} style="margin-top:4px">
+        <div><b class="small">${l}</b><div class="muted small">${dsc}</div></div></label>`).join("")}
+      <div class="row mt" style="gap:8px"><span class="small">ينتهي الربط تلقائياً بعد</span>
+        <select id="cl_idle">${[7, 14, 30, 60, 90].map((n) => `<option value="${n}" ${n === st.idle_days ? "selected" : ""}>${n} يوم</option>`).join("")}</select>
+        <span class="small">بدون استخدام</span></div>
+      <button class="btn pri mt" onclick="Claude.save()">حفظ</button>
+      ${st.updated_at ? `<div class="muted small mt">آخر تعديل ${fmtDate(st.updated_at)}${st.updated_by ? " · " + esc(st.updated_by) : ""}</div>` : ""}
+    </div>
+    <div class="card"><h3>📊 الاستخدام آخر 30 يوم</h3>
+      <div class="grid g4 mb"><div><div class="muted small">طلبات</div><b style="font-size:22px">${fmtNum(u.calls_30d)}</b></div>
+        <div><div class="muted small">مرفوضة</div><b style="font-size:22px">${fmtNum(u.errors_30d)}</b></div>
+        <div><div class="muted small">أجهزة مربوطة</div><b style="font-size:22px">${fmtNum(conns.filter((c) => !c.expired).length)}</b></div></div>
+      ${Object.keys(u.by_tool ?? {}).length ? `<table class="t">${Object.entries(u.by_tool).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<tr><td class="small">${esc(CLAUDE_TOOL_AR[t] || t)}</td><td class="small" style="text-align:left">${fmtNum(n)}</td></tr>`).join("")}</table>` : `<div class="empty small">لا يوجد استخدام بعد</div>`}
+    </div>
+  </div>
+  <div class="card mb"><h3>📱 الحسابات المربوطة</h3>
+    ${!conns.length ? `<div class="empty small">لا يوجد أي حساب مربوط بـ Claude حالياً</div>` : `<table class="t">
+      <tr class="muted small"><td>المستخدم</td><td>التطبيق</td><td>آخر استخدام</td><td>الحالة</td><td></td></tr>
+      ${conns.map((c) => `<tr><td><b class="small">${esc(c.user)}</b>${c.is_manager ? ` <span class="badge">مدير</span>` : ""}<div class="muted small">${esc(c.job_title || "")}</div></td>
+        <td class="small">${esc(c.client)}<div class="muted">منذ ${fmtDate(c.connected_at)}</div></td>
+        <td class="small">${fmtDate(c.last_active)}<div class="muted">${fmtNum(c.calls_30d)} طلب</div></td>
+        <td>${c.expired ? `<span class="badge b-amber">منتهي</span>` : `<span class="badge b-green">نشط</span><div class="muted small">حتى ${fmtDate(c.expires_at)}</div>`}</td>
+        <td style="text-align:left"><button class="btn sm danger" onclick="Claude.revoke('${safeId(c.session_id)}')">إلغاء الربط</button></td></tr>`).join("")}</table>`}
+  </div>
+  ${(u.recent ?? []).length ? `<div class="card"><h3>🕑 آخر الطلبات</h3><table class="t">${u.recent.map((r) => `<tr>
+      <td class="small">${fmtDate(r.at)} <span class="muted">${new Date(r.at).toLocaleTimeString("ar-SA", { hour:"2-digit", minute:"2-digit" })}</span></td>
+      <td class="small">${esc(r.user || "")}</td><td class="small">${esc(CLAUDE_TOOL_AR[r.tool] || r.tool)}</td>
+      <td>${r.ok === false ? `<span class="badge b-red">${esc(CLAUDE_ERR_AR[r.error] || "مرفوض")}</span>` : r.ok ? `<span class="badge b-green">تم</span>` : `<span class="badge">…</span>`}</td></tr>`).join("")}</table></div>` : ""}`;
+}
+const Claude = {
+  async load() {
+    try { S.claude = await rpc("claude_page", {}); }
+    catch (err) { S.claude = /claude_page|function|schema cache/i.test(err.message || "") ? { unavailable:true } : (toast("خطأ: " + err.message), { unavailable:true }); }
+    if (S.view === "claude") $("#content").innerHTML = viewClaude();
+  },
+  async save() {
+    const scopes = [...document.querySelectorAll('input[name="cl_scope"]:checked')].map((i) => i.value);
+    const enabled = $("#cl_on").checked, idle = Number($("#cl_idle").value);
+    if (enabled && !scopes.length) return toast("اختر نوع بيانات واحد على الأقل، أو أوقف الربط");
+    const { error } = await sb.rpc("claude_save_settings", { p_enabled:enabled, p_scopes:scopes, p_idle_days:idle });
+    if (error) return toast("خطأ: " + error.message);
+    toast("تم الحفظ ✅ يطبَّق على Claude فوراً"); await Claude.load();
+  },
+  async revoke(sid) {
+    const who = (S.claude?.connections ?? []).find((c) => c.session_id === sid)?.user || "";
+    if (!confirm(`إلغاء ربط Claude لحساب ${who}؟ يتوقف فوراً، ويقدر يربط من جديد لاحقاً.`)) return;
+    const { error } = await sb.rpc("claude_revoke", { p_session:sid });
+    if (error) return toast("خطأ: " + error.message);
+    toast("تم إلغاء الربط ✅"); await Claude.load();
+  },
+  async copy() {
+    try { await navigator.clipboard.writeText(MCP_URL); toast("تم نسخ الرابط ✅"); } catch { toast(MCP_URL); }
+  },
+};
+window.Claude = Claude;
 const Gov = {
   async audit() {
     const st = (S.audit = S.audit || { n:0, entity:"", action:"", rows:null, total:0 });

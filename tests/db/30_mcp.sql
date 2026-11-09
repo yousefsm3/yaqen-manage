@@ -56,12 +56,12 @@ set session_replication_role = origin;
 select qa.expect('MCP-A','all 10 tool functions exist', (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public' and p.proname in ('mcp_company_overview','mcp_projects','mcp_project_detail','mcp_invoices','mcp_fleet','mcp_expiring','mcp_people','mcp_search','mcp_notes_rooms','mcp_profit_comparison')), '10');
 select qa.expect('MCP-A','every tool is SECURITY INVOKER (RLS applies)', (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-  where n.nspname = 'public' and p.proname like 'mcp\_%' and p.proname not in ('mcp_guard','mcp_selfcheck','mcp_begin','mcp_end','mcp_clamp','mcp_text') and p.prosecdef), '0');
+  where n.nspname = 'public' and p.proname like 'mcp\_%' and p.proname not in ('mcp_guard','mcp_selfcheck','mcp_begin','mcp_end','mcp_clamp','mcp_text','mcp_effective','mcp_scope_ok','mcp_last_active','mcp_all_scopes') and p.prosecdef), '0');
 select qa.expect('MCP-A','every tool is read-only (STABLE)', (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-  where n.nspname = 'public' and p.proname like 'mcp\_%' and p.proname not in ('mcp_begin','mcp_end','mcp_clamp','mcp_text') and p.provolatile <> 's'), '0');
+  where n.nspname = 'public' and p.proname like 'mcp\_%' and p.proname not in ('mcp_begin','mcp_end','mcp_clamp','mcp_text','mcp_all_scopes') and p.provolatile <> 's'), '0');
 select qa.expect('MCP-A','no tool takes a company / user / role argument', (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public' and p.proname like 'mcp\_%' and exists (select 1 from unnest(coalesce(p.proargnames, '{}')) a where a ~* '(company|user|role|cid|uid)')
-  and p.proname not in ('mcp_begin','mcp_end')), '0');
+  and p.proname not in ('mcp_begin','mcp_end','mcp_effective','mcp_last_active')), '0');
 select qa.expect_blocked('MCP-A','anonymous caller cannot run a tool', qa.run('anon', $$select public.mcp_company_overview()::text$$));
 select qa.expect_true('MCP-A','tool rejects a company_id argument (no such parameter)',
   pg_temp.r(:A1, $$select public.mcp_invoices(p_company_id => '00000000-0000-0000-0000-0000000000b0')::text$$) like 'BLOCKED%');
