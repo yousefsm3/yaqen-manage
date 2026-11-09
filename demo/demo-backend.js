@@ -51,7 +51,7 @@ const DEMO = (() => {
   });
   const clients = ["عميل رئيسي أ (وهمي)","عميل صناعي ب (وهمي)","شركة التعدين ج (وهمية)","شركة الطاقة د (وهمية)","مقاول رئيسي هـ (وهمي)"];
   const invoices = Array.from({ length:148 }, (_, i) => {
-    const out = i % 3 !== 0, dd = n(-75, 60), paid = dd < -20 ? rnd() < 0.88 : dd < 0 ? rnd() < 0.6 : rnd() < 0.2;
+    const out = i % 3 !== 0, dd = i < 90 ? n(-330, -20) : n(-75, 60), paid = dd < -60 ? rnd() < 0.98 : dd < -20 ? rnd() < 0.88 : dd < 0 ? rnd() < 0.6 : rnd() < 0.2;
     return { id:uid(), company_id:CID, department_id:dep("المالية"), number:(out ? "INV-2026-" : "SUP-") + String(1000 + i), kind:out ? "صادرة" : "واردة",
       party:out ? pick(clients) : pick(["مؤسسة قطع الغيار الحديثة","شركة الوقود المتحدة","مصنع الحديد الوطني","شركة التأمين التعاوني"]),
       amount:n(8, 480) * 1000, due_date:day(dd), status:paid ? "مدفوعة" : dd < 0 ? "متأخرة" : "غير مدفوعة", updated_at:ts(-n(0, 90)), created_by:ADMIN };
@@ -212,6 +212,25 @@ function createClient() {
     my_account: () => { const p = me(); const c = DB.companies.find((x) => x.id === p?.company_id); return p && { id:p.id, status:p.status, role:p.role, company_id:p.company_id, company_name:c?.name, company_active:c?.active, mfa_required:false, aal:"aal1" }; },
     lookup_company: ({ code }) => { const c = DB.companies.find((x) => [x.join_code, x.admin_code].includes(String(code).toUpperCase()) && x.active && !x.deleted_at); return c ? { name:c.name, logo_url:c.logo_url, is_admin_code:c.admin_code === String(code).toUpperCase() } : null; },
     dashboard_stats: ({ cid }) => stats(cid),
+    // same shape and rules as public.dashboard_charts (due-date basis, last 12 months, visible rows only)
+    dashboard_charts: ({ cid }) => {
+      const v = (t) => rows(t).filter((r) => r.company_id === cid), now = new Date(), ym = (d) => d.slice(0, 7);
+      const months = Array.from({ length:12 }, (_, i) => { const d = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 11 + i, 1)); return d.toISOString().slice(0, 7); });
+      const inv = v("invoices"), sum = (xs) => xs.reduce((s, x) => s + Number(x.amount), 0);
+      const unpaid = inv.filter((x) => x.kind === "صادرة" && x.status !== "مدفوعة").map((x) => ({ a:Number(x.amount), d:-dd(x.due_date) }));
+      const by = (t) => v(t).reduce((o, r) => ((o[r.status || "بدون حالة"] = (o[r.status || "بدون حالة"] || 0) + 1), o), {});
+      const depAmt = {}; inv.filter((x) => x.kind === "صادرة" && x.status !== "مدفوعة").forEach((x) => { depAmt[x.department_id] = (depAmt[x.department_id] || 0) + Number(x.amount); });
+      const exp = [...v("documents").map((d) => d.expiry_date), ...v("vehicles").flatMap((x) => [x.registration_expiry, x.insurance_expiry, x.license_expiry])].filter(Boolean).map(dd);
+      return { as_of:new Date().toISOString(),
+        monthly:months.map((m) => { const r = inv.filter((x) => x.due_date && ym(x.due_date) === m);
+          return { month:m, issued:sum(r.filter((x) => x.kind === "صادرة")), incoming:sum(r.filter((x) => x.kind === "واردة")), collected:sum(r.filter((x) => x.kind === "صادرة" && x.status === "مدفوعة")) }; }),
+        aging:{ not_due:sum(unpaid.filter((x) => x.d <= 0).map((x) => ({ amount:x.a }))), d1_30:sum(unpaid.filter((x) => x.d >= 1 && x.d <= 30).map((x) => ({ amount:x.a }))),
+          d31_60:sum(unpaid.filter((x) => x.d >= 31 && x.d <= 60).map((x) => ({ amount:x.a }))), d61_90:sum(unpaid.filter((x) => x.d >= 61 && x.d <= 90).map((x) => ({ amount:x.a }))),
+          d90_plus:sum(unpaid.filter((x) => x.d > 90).map((x) => ({ amount:x.a }))) },
+        fleet:by("vehicles"), projects:by("projects"),
+        receivables_by_dept:Object.entries(depAmt).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, amount]) => ({ department:DB.departments.find((d) => d.id === id)?.name || "بدون قسم", amount })),
+        expiry:{ expired:exp.filter((d) => d < 0).length, d30:exp.filter((d) => d >= 0 && d <= 30).length, d90:exp.filter((d) => d > 30 && d <= 90).length } };
+    },
     company_alerts: ({ cid, lim }) => alerts(cid).slice(0, lim || 100),
     department_summary: ({ cid }) => rows("departments").filter((d) => d.company_id === cid).map((d) => ({ department_id:d.id,
       people:DB.profiles.filter((p) => p.department_id === d.id && p.status === "active").length,

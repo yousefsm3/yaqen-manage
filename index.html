@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B1220">
+<meta name="theme-color" content="#F3F6F5">
+<script>/* theme before first paint (no flash) */try{var t=localStorage.getItem("yq_theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"),l=localStorage.getItem("yq_lang")==="en";document.documentElement.dataset.theme=t;if(l){document.documentElement.lang="en";document.documentElement.dir="ltr"}}catch(e){}</script>
 <!-- H1 defence in depth: scripts only from this site + the supabase-js CDN; network only to our Supabase project.
      Even if some text were ever interpreted as code, it could not send data anywhere else. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://zalfumkzlnpygvemxayb.supabase.co; media-src 'self' blob: https://zalfumkzlnpygvemxayb.supabase.co; connect-src https://zalfumkzlnpygvemxayb.supabase.co wss://zalfumkzlnpygvemxayb.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
@@ -14,74 +15,106 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0B1220; --panel:#111A2E; --panel2:#16213A; --line:#22304F; --text:#E8EEF8; --muted:#8C9BB8;
-  --green:#22C55E; --green2:#16A34A; --greenSoft:rgba(34,197,94,.12);
-  --red:#EF4444; --redSoft:rgba(239,68,68,.12); --amber:#F59E0B; --amberSoft:rgba(245,158,11,.12);
-  --blue:#3B82F6; --blueSoft:rgba(59,130,246,.12); --r:14px;
+/* ===== Themes: light (default) and dark. Every colour comes from these variables. ===== */
+:root, html[data-theme="light"]{
+  --bg:#F3F6F5; --panel:#FFFFFF; --panel2:#EEF3F1; --line:#E1E8E5; --text:#14211D; --muted:#66776F;
+  --green:#11806A; --green2:#0C6B58; --greenSoft:rgba(17,128,106,.10); --onpri:#FFFFFF;
+  --red:#D93A3A; --redSoft:rgba(217,58,58,.10); --amber:#C9790B; --amberSoft:rgba(201,121,11,.12);
+  --blue:#2F6FD6; --blueSoft:rgba(47,111,214,.10);
+  --accent:#D9825B; --accentSoft:rgba(217,130,91,.14); --navy:#1F3B4D; --c4:#9DB5AE;
+  --greenTxt:#0B6E5A; --redTxt:#B42323; --amberTxt:#9A5B05; --blueTxt:#2459B3;
+  --topbg:rgba(243,246,245,.88); --mine:#E3F3EE; --mineLine:#BFE3D7; --scrim:rgba(20,33,29,.45);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 2px 8px rgba(16,24,40,.05); --r:14px;
+  color-scheme:light;
+}
+html[data-theme="dark"]{
+  --bg:#0B1210; --panel:#121B19; --panel2:#18231F; --line:#24322D; --text:#E6EEEA; --muted:#8B9C96;
+  --green:#34C3A0; --green2:#22A585; --greenSoft:rgba(52,195,160,.13); --onpri:#04140F;
+  --red:#F06A6A; --redSoft:rgba(240,106,106,.13); --amber:#F2B24C; --amberSoft:rgba(242,178,76,.13);
+  --blue:#6EA8FE; --blueSoft:rgba(110,168,254,.13);
+  --accent:#E59B74; --accentSoft:rgba(229,155,116,.15); --navy:#A9C6D6; --c4:#4E625C;
+  --greenTxt:#5FD8B8; --redTxt:#F79A9A; --amberTxt:#F5C478; --blueTxt:#9CC3FF;
+  --topbg:rgba(11,18,16,.86); --mine:#123A30; --mineLine:#1D5546; --scrim:rgba(0,0,0,.6);
+  --shadow:none;
+  color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-size:15px;line-height:1.6}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 a{color:var(--green)}
 .hidden{display:none!important}
+/* icons: line icons drawn inline, they take the text colour */
+.i{width:18px;height:18px;flex-shrink:0;vertical-align:-3px}
+.i.lg{width:22px;height:22px}.i.xl{width:40px;height:40px;stroke-width:1.4}
+html[dir="rtl"] .i.dir{transform:scaleX(-1)}
+.chipi{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--greenSoft);color:var(--green);flex-shrink:0}
+.chipi.red{background:var(--redSoft);color:var(--red)}.chipi.amber{background:var(--amberSoft);color:var(--amber)}
+.chipi.blue{background:var(--blueSoft);color:var(--blue)}.chipi.acc{background:var(--accentSoft);color:var(--accent)}
 
 /* auth */
-.auth{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 500px at 80% -10%,rgba(34,197,94,.15),transparent),var(--bg)}
-.auth-card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px}
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 500px at 80% -10%,var(--greenSoft),transparent),var(--bg)}
+.auth-card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:var(--shadow)}
+.auth-tools{display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-.logo{width:44px;height:44px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;overflow:hidden;flex-shrink:0}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--greenSoft);color:var(--green);display:grid;place-items:center;overflow:hidden;flex-shrink:0}
 .logo img{width:100%;height:100%;object-fit:cover}
 .brand h1{font-size:20px;font-weight:700}
 .brand small{color:var(--muted);font-size:12px;display:block}
 .tabs{display:flex;background:var(--panel2);border-radius:12px;padding:4px;margin-bottom:18px}
 .tabs button{flex:1;border:0;background:none;padding:9px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:600}
-.tabs button.on{background:var(--bg);color:var(--text)}
+.tabs button.on{background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
 label.f{display:block;margin-bottom:12px}
 label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
-.in{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
-.in:focus{border-color:var(--green)}
+.in{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+html[data-theme="dark"] .in{background:var(--bg)}
+.in:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--greenSoft)}
 textarea.in{min-height:90px;resize:vertical}
-.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;background:var(--panel2);display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap}
-.btn:hover{filter:brightness(1.15)}
-.btn.pri{background:var(--green);color:#04150A}
+.btn{border:1px solid transparent;border-radius:10px;padding:9px 15px;font-weight:600;cursor:pointer;background:var(--panel2);display:inline-flex;align-items:center;gap:7px;justify-content:center;white-space:nowrap;transition:background .15s,border-color .15s,filter .15s}
+.btn:hover{filter:brightness(.97)}
+html[data-theme="dark"] .btn:hover{filter:brightness(1.15)}
+.btn.pri{background:var(--green);color:var(--onpri)}
 .btn.danger{background:var(--redSoft);color:var(--red)}
-.btn.ghost{background:none;border:1px solid var(--line)}
-.btn.ai{background:linear-gradient(135deg,#22C55E,#0EA5E9);color:#03130A}
+.btn.ghost{background:transparent;border-color:var(--line)}
+.btn.ai{background:var(--navy);color:var(--panel)}
+html[data-theme="dark"] .btn.ai{color:#0B1210}
 .btn.sm{padding:6px 11px;font-size:13px}
 .btn.full{width:100%}
 .btn:disabled{opacity:.5;cursor:default}
-.msg{font-size:13px;margin-top:10px;padding:10px;border-radius:10px;background:var(--panel2)}
-.msg.err{background:var(--redSoft);color:#FCA5A5}
-.msg.ok{background:var(--greenSoft);color:#86EFAC}
+.btn.icon{padding:7px;width:36px;height:36px}
+.msg{font-size:13px;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--panel2)}
+.msg.err{background:var(--redSoft);color:var(--redTxt)}
+.msg.ok{background:var(--greenSoft);color:var(--greenTxt)}
 .powered{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
 
-/* shell */
+/* shell (logical properties: the sidebar sits at the start side in Arabic and in English) */
 .shell{display:flex;min-height:100vh}
-.side{width:250px;background:var(--panel);border-left:1px solid var(--line);padding:18px 12px;position:fixed;top:0;bottom:0;right:0;overflow-y:auto;z-index:40;transition:transform .25s}
+.side{width:250px;background:var(--panel);border-inline-end:1px solid var(--line);padding:18px 12px;position:fixed;top:0;bottom:0;inset-inline-start:0;overflow-y:auto;z-index:40;transition:transform .25s}
 .side .brand{padding:0 6px}
-.nav button{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--muted);text-align:right;font-weight:500}
+.nav button{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;padding:9px 12px;border-radius:10px;cursor:pointer;color:var(--muted);text-align:start;font-weight:500}
 .nav button:hover{background:var(--panel2);color:var(--text)}
-.nav button.on{background:var(--greenSoft);color:var(--green)}
-.nav .ico{width:22px;text-align:center}
-.nav .sec{font-size:11px;color:var(--muted);opacity:.7;padding:14px 12px 4px}
-.nav .cnt{margin-right:auto;background:var(--redSoft);color:var(--red);font-size:11px;padding:1px 7px;border-radius:20px}
-.main{flex:1;margin-right:250px;min-width:0}
-.top{position:sticky;top:0;z-index:30;background:rgba(11,18,32,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;gap:12px}
+.nav button.on{background:var(--greenSoft);color:var(--green);font-weight:600}
+.nav .ico{width:22px;display:grid;place-items:center}
+.nav .sec{font-size:11px;color:var(--muted);opacity:.8;padding:14px 12px 4px;letter-spacing:.2px}
+.nav .cnt{margin-inline-start:auto;background:var(--redSoft);color:var(--red);font-size:11px;padding:1px 7px;border-radius:20px}
+.main{flex:1;margin-inline-start:250px;min-width:0}
+.top{position:sticky;top:0;z-index:30;background:var(--topbg);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 22px;display:flex;align-items:center;gap:10px}
 .top h2{font-size:18px;font-weight:700;flex:1}
 .me{display:flex;align-items:center;gap:8px;cursor:pointer}
-.av{width:36px;height:36px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;overflow:hidden;font-weight:700;color:var(--green);flex-shrink:0;font-size:14px}
+.av{width:36px;height:36px;border-radius:50%;background:var(--greenSoft);display:grid;place-items:center;overflow:hidden;font-weight:700;color:var(--green);flex-shrink:0;font-size:14px}
 .av img{width:100%;height:100%;object-fit:cover}
 .av.lg{width:84px;height:84px;font-size:30px}
-.menu-btn{display:none;border:0;background:var(--panel2);width:38px;height:38px;border-radius:10px;font-size:18px;cursor:pointer}
-.content{padding:22px;max-width:1200px}
+.menu-btn{display:none;border:0;background:var(--panel2);width:38px;height:38px;border-radius:10px;cursor:pointer}
+.content{padding:22px;max-width:1240px}
 .overlay{display:none}
+.tbtn{border:1px solid var(--line);background:var(--panel);width:36px;height:36px;border-radius:10px;cursor:pointer;display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--text)}
+.tbtn:hover{border-color:var(--green);color:var(--green)}
 
 @media(max-width:900px){
   .side{transform:translateX(100%)}
-  .side.open{transform:none}
-  .overlay.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:35}
-  .main{margin-right:0}
+  html[dir="ltr"] .side{transform:translateX(-100%)}
+  .side.open,html[dir="ltr"] .side.open{transform:none}
+  .overlay.open{display:block;position:fixed;inset:0;background:var(--scrim);z-index:35}
+  .main{margin-inline-start:0}
   .menu-btn{display:grid;place-items:center}
   .content{padding:14px}
   .top{padding:10px 14px}
@@ -90,55 +123,95 @@ textarea.in{min-height:90px;resize:vertical}
 
 /* cards */
 .grid{display:grid;gap:14px}
-.g4{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
 .g3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 .g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.g21{grid-template-columns:2fr 1fr}
+.kgrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1100px){.kgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.g3f{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+@media(max-width:1000px){.g21{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
 .card h3{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h3 .i{color:var(--muted)}
+.card .sub{font-size:12px;color:var(--muted);font-weight:400;margin-inline-start:auto}
 .kpi{cursor:pointer;transition:.15s}
 .kpi:hover{border-color:var(--green)}
-.kpi .v{font-size:28px;font-weight:700;line-height:1.2}
+.kpi .v{font-size:26px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
 .kpi .l{color:var(--muted);font-size:13px}
 .kpi .s{font-size:12px;margin-top:4px}
+.kt{display:flex;flex-direction:column;gap:6px}
+.kt .top2{display:flex;align-items:center;gap:10px}
+.kt .v{font-size:24px;overflow-wrap:anywhere}
+@media(max-width:500px){.ai-hero .row>.btn{width:100%}.kt .v{font-size:19px}.kgrid{gap:10px}.kt{padding:12px}}
+.up{color:var(--greenTxt)}.down{color:var(--redTxt)}
 .mt{margin-top:16px}.mb{margin-bottom:16px}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sp{flex:1}
 .muted{color:var(--muted)}
 .small{font-size:13px}
-.badge{display:inline-block;font-size:12px;padding:2px 9px;border-radius:20px;background:var(--panel2);color:var(--muted);white-space:nowrap}
-.b-green{background:var(--greenSoft);color:#4ADE80}
-.b-red{background:var(--redSoft);color:#F87171}
-.b-amber{background:var(--amberSoft);color:#FBBF24}
-.b-blue{background:var(--blueSoft);color:#60A5FA}
-.list .it{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 9px;border-radius:20px;background:var(--panel2);color:var(--muted);white-space:nowrap}
+.b-green{background:var(--greenSoft);color:var(--greenTxt)}
+.b-red{background:var(--redSoft);color:var(--redTxt)}
+.b-amber{background:var(--amberSoft);color:var(--amberTxt)}
+.b-blue{background:var(--blueSoft);color:var(--blueTxt)}
+.list .it{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line)}
 .list .it:last-child{border-bottom:0}
 .dot{width:9px;height:9px;border-radius:50%;margin-top:8px;flex-shrink:0}
-.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.empty{text-align:center;color:var(--muted);padding:28px 10px}
+.empty .i.xl{color:var(--c4);margin-bottom:6px}
 .bar{height:7px;background:var(--panel2);border-radius:10px;overflow:hidden;margin-top:8px}
 .bar i{display:block;height:100%;background:var(--green);border-radius:10px}
+
+/* charts */
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{fill:var(--muted);font-size:11px;font-family:inherit}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legend i.ln{height:0;border-top:2px dashed var(--muted);border-radius:0;width:14px}
+.donut{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.donut svg{width:150px;height:150px;flex-shrink:0}
+.donut .dl{flex:1;min-width:130px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.donut .dl div{display:flex;align-items:center;gap:8px}
+.donut .dl i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.donut .dl b{margin-inline-start:auto;font-variant-numeric:tabular-nums}
+.hb{display:flex;flex-direction:column;gap:12px}
+.hb .r{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;align-items:center;gap:10px;font-size:13px}
+.hb .r.clk{cursor:pointer}
+.hb .r .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .trk{height:8px;background:var(--panel2);border-radius:8px;overflow:hidden}
+.hb .trk i{display:block;height:100%;border-radius:8px}
+.hb.st .r{grid-template-columns:1fr auto;row-gap:4px}.hb.st .r .trk{grid-column:1 / -1;grid-row:2}.hb.st .r .nm{white-space:normal}
+.hb .vv{font-variant-numeric:tabular-nums;color:var(--muted);min-width:42px;text-align:end;font-size:12px}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat3 div{background:var(--panel2);border-radius:12px;padding:12px;text-align:center}
+.stat3 b{display:block;font-size:22px}
+.note{font-size:11px;color:var(--muted);margin-top:8px}
 
 /* records */
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .toolbar .in{flex:1;min-width:180px}
-.rec{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;transition:.15s}
-.rec:hover{border-color:#2E4370}
+.rec{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;transition:.15s;box-shadow:var(--shadow)}
+.rec:hover{border-color:var(--green)}
 .rec .t{font-weight:700;font-size:15px}
 .rec .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .person{display:flex;align-items:center;gap:12px}
 
 /* ai */
-.ai-hero{background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(14,165,233,.10));border:1px solid rgba(34,197,94,.35);border-radius:18px;padding:18px}
+.ai-hero{background:linear-gradient(135deg,var(--greenSoft),var(--accentSoft));border:1px solid var(--line);border-radius:16px;padding:16px}
 .ring{width:96px;height:96px;flex-shrink:0;position:relative}
 .ring svg{transform:rotate(-90deg)}
 .ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:24px}
-.risk{border-right:3px solid var(--line);padding:8px 12px;margin-bottom:8px;background:var(--panel2);border-radius:8px}
-.risk.h{border-right-color:var(--red)}.risk.m{border-right-color:var(--amber)}.risk.l{border-right-color:var(--blue)}
+.risk{border-inline-start:3px solid var(--line);padding:8px 12px;margin-bottom:8px;background:var(--panel2);border-radius:8px}
+.risk.h{border-inline-start-color:var(--red)}.risk.m{border-inline-start-color:var(--amber)}.risk.l{border-inline-start-color:var(--blue)}
+.risk.g{border-inline-start-color:var(--green)}.risk.b{border-inline-start-color:var(--blue)}
 .chat{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:420px}
 .msgs{flex:1;overflow-y:auto;padding:4px 2px 12px;display:flex;flex-direction:column;gap:10px}
 .bub{max-width:85%;padding:11px 14px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
-.bub.u{align-self:flex-start;background:var(--green);color:#04150A;border-bottom-right-radius:4px}
-.bub.a{align-self:flex-end;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
-.bub.a ul{padding-right:18px}
+.bub.u{align-self:flex-start;background:var(--green);color:var(--onpri);border-end-start-radius:4px}
+.bub.a{align-self:flex-end;background:var(--panel);border:1px solid var(--line);border-end-end-radius:4px}
+.bub.a ul{padding-inline-start:18px}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .chip{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer}
 .chip:hover{border-color:var(--green);color:var(--green)}
@@ -147,17 +220,17 @@ textarea.in{min-height:90px;resize:vertical}
 .typing span{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin:0 2px;animation:bl 1s infinite}
 .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
 @keyframes bl{0%,100%{opacity:.2}50%{opacity:1}}
-.fab{position:fixed;left:18px;bottom:18px;width:58px;height:58px;border-radius:50%;border:0;background:linear-gradient(135deg,#22C55E,#0EA5E9);font-size:24px;cursor:pointer;box-shadow:0 10px 30px rgba(34,197,94,.35);z-index:25}
+.fab{position:fixed;inset-inline-end:18px;bottom:18px;width:54px;height:54px;border-radius:50%;border:0;background:var(--green);color:var(--onpri);cursor:pointer;box-shadow:0 8px 24px rgba(17,128,106,.3);z-index:25;display:grid;place-items:center}
 
 /* modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.modal{position:fixed;inset:0;background:var(--scrim);z-index:60;display:flex;align-items:flex-end;justify-content:center}
 @media(min-width:700px){.modal{align-items:center}}
 .sheet{background:var(--panel);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:20px;border:1px solid var(--line)}
 @media(min-width:700px){.sheet{border-radius:20px}}
-.sheet h3{font-size:17px;margin-bottom:14px}
+.sheet h3{font-size:17px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
 @media(max-width:500px){.two{grid-template-columns:1fr}}
-.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 18px;border-radius:12px;z-index:80;font-size:14px}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:12px;z-index:80;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .spin{width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
 /* cropper */
@@ -168,37 +241,46 @@ input[type=range]{width:100%;accent-color:var(--green)}
 /* rooms */
 .room-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .avs{display:flex}
-.avs .av{width:28px;height:28px;font-size:11px;border:2px solid var(--panel);margin-left:-8px}
+.avs .av{width:28px;height:28px;font-size:11px;border:2px solid var(--panel);margin-inline-end:-8px}
 .m{display:flex;gap:8px;align-items:flex-end;max-width:88%}
 .m.me{align-self:flex-start;flex-direction:row}
 .m.other{align-self:flex-end;flex-direction:row-reverse}
 .m .av{width:30px;height:30px;font-size:12px}
 .m .b{padding:9px 12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);white-space:pre-wrap;word-wrap:break-word;min-width:60px}
-.m.me .b{background:#123524;border-color:#1E5A3A}
+.m.me .b{background:var(--mine);border-color:var(--mineLine)}
 .m .who{font-size:12px;color:var(--green);font-weight:600;margin-bottom:2px}
 .m .tm{font-size:11px;color:var(--muted);margin-top:4px}
 .m img.pic{max-width:240px;max-height:260px;border-radius:10px;display:block;cursor:pointer}
 .m audio{width:230px;max-width:100%;height:40px}
 .fileln{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-.fileln .ic{width:40px;height:40px;border-radius:10px;background:var(--panel2);display:grid;place-items:center;font-size:20px}
+.fileln .ic{width:40px;height:40px;border-radius:10px;background:var(--panel2);display:grid;place-items:center}
 .m.ai{align-self:center;max-width:95%}
-.m.ai .b{background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(14,165,233,.10));border-color:rgba(34,197,94,.35)}
-.rec-bar{display:flex;align-items:center;gap:10px;background:var(--redSoft);color:#FCA5A5;border-radius:12px;padding:8px 12px;flex:1}
+.m.ai .b{background:linear-gradient(135deg,var(--greenSoft),var(--accentSoft));border-color:var(--line)}
+.rec-bar{display:flex;align-items:center;gap:10px;background:var(--redSoft);color:var(--redTxt);border-radius:12px;padding:8px 12px;flex:1}
 .rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:bl 1s infinite}
-.iconbtn{border:0;background:var(--panel2);width:42px;height:42px;border-radius:12px;font-size:18px;cursor:pointer;flex-shrink:0;display:grid;place-items:center}
+.iconbtn{border:0;background:var(--panel2);width:42px;height:42px;border-radius:12px;cursor:pointer;flex-shrink:0;display:grid;place-items:center;color:var(--text)}
 .pick{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;cursor:pointer}
 .pick:hover{background:var(--panel2)}
 .pick input{width:18px;height:18px;accent-color:var(--green)}
-.tr{margin-top:7px;padding-top:7px;border-top:1px dashed rgba(255,255,255,.18);font-size:13px}
+.tr{margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);font-size:13px}
 .tr div{margin-top:3px}
-.tr .lg{font-size:11px;color:var(--muted);margin-left:6px}
-.trbtn{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;margin-top:4px;padding:0}
+.tr .lg{font-size:11px;color:var(--muted);margin-inline-end:6px}
+.trbtn{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;margin-top:4px;padding:0;display:inline-flex;align-items:center;gap:4px}
 .trbtn:hover{color:var(--green)}
+.trbtn .i{width:14px;height:14px}
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:90;display:grid;place-items:center;padding:16px}
 .lightbox img{max-width:100%;max-height:100%;border-radius:8px}
 table.t{width:100%;border-collapse:collapse;font-size:14px}
-table.t td,table.t th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right}
+table.t td,table.t th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:start}
 table.t th{color:var(--muted);font-weight:500;font-size:13px}
+.end{text-align:end!important}
+@media print {
+  .side, .top, .noprint, #demoBar, .fab, .toast { display:none !important; }
+  body, .main, .card { background:#fff !important; color:#000 !important; }
+  .card { border:1px solid #ccc !important; box-shadow:none !important; break-inside:avoid; }
+  .shell { display:block !important; }
+  .main { margin:0 !important; }
+}
 </style>
 </head>
 <body>
@@ -228,13 +310,197 @@ window.addEventListener("unhandledrejection", (e) => reportError(e.reason?.messa
 
 const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-const fmtNum = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString("ar-SA"));
-const fmtSAR = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString("ar-SA") + " ر.س");
+const fmtNum = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString(LOC()));
+const fmtSAR = (n) => (n == null || n === "" ? "-" : Number(n).toLocaleString(LOC()) + L(" ر.س", " SAR"));
 const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
 const daysLeft = (d) => (d ? Math.round((new Date(d) - today()) / 86400000) : null);
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-SA-u-ca-gregory", { year:"numeric", month:"short", day:"numeric" }) : "-");
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(DLOC(), { year:"numeric", month:"short", day:"numeric" }) : "-");
 // H1 rule: inside inline event handlers only validated ids or fixed keys may appear, never free text.
 const safeId = (x) => (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(x ?? "")) ? String(x) : "");
+
+// ===== UI preferences: theme (light/dark) and language (ar/en), remembered per browser =====
+const PREF = {
+  get(k, d) { try { return localStorage.getItem(k) || d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+let LANG = PREF.get("yq_lang", "ar") === "en" ? "en" : "ar";
+let THEME = PREF.get("yq_theme", "") || (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+const LOC = () => (LANG === "en" ? "en-US" : "ar-SA-u-nu-latn");   // Latin digits in both languages (clearer in tables and charts)
+const DLOC = () => (LANG === "en" ? "en-GB" : "ar-SA-u-ca-gregory-nu-latn");
+const L = (ar, en) => (LANG === "en" ? en : ar);   // for texts with numbers in the middle (word order differs)
+function applyPrefs() {
+  const h = document.documentElement;
+  h.dataset.theme = THEME; h.lang = LANG; h.dir = LANG === "en" ? "ltr" : "rtl";
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME === "dark" ? "#0B1210" : "#F3F6F5");
+}
+applyPrefs();
+
+// ===== Icons: simple line icons (SVG), they inherit the text colour =====
+const IC = {
+  grid:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+  sparkles:'<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
+  chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  inboxmsg:'<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M8 9h8M8 12h5"/>',
+  pin:'<path d="M12 17v4"/><path d="M8 3h8l-1 6 3 3v2H6v-2l3-3z"/>',
+  building:'<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.2 2.5 3.5 5.2"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/>',
+  userplus:'<circle cx="10" cy="8" r="4"/><path d="M2.5 21c.8-4 3.8-6 7.5-6 1.5 0 2.9.3 4 1M19 14v6M16 17h6"/>',
+  truck:'<path d="M2 6h11v10H2z"/><path d="M13 9h4.5l3.5 3.5V16h-8"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+  hardhat:'<path d="M3 18h18"/><path d="M5 18v-3a7 7 0 0 1 14 0v3"/><path d="M10 8V5h4v3"/>',
+  scale:'<path d="M12 3v18M7 21h10M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/>',
+  receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  inbox:'<path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1.5 2.5h5L16 13h5"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+  logout:'<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/>',
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  bell:'<path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  next:'<path d="m9 6 6 6-6 6"/>',
+  prev:'<path d="m15 6-6 6 6 6"/>',
+  refresh:'<path d="M20 11a8 8 0 0 0-14.9-3.5L3 10"/><path d="M3 4v6h6M4 13a8 8 0 0 0 14.9 3.5L21 14"/><path d="M21 20v-6h-6"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  check:'<path d="m5 12.5 4.5 4.5L19 7"/>',
+  alert:'<path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/>',
+  pause:'<path d="M9 5v14M15 5v14"/>',
+  play:'<path d="M7 5v14l11-7z"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  clip:'<path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.3 3.3 0 0 1 4.7 4.7L10.2 17a1.7 1.7 0 0 1-2.4-2.4L15.5 7"/>',
+  send:'<path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
+  crop:'<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
+  camera:'<path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
+  printer:'<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/>',
+  external:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  tag:'<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>',
+  lock:'<rect x="4.5" y="10" width="15" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  unlock:'<rect x="4.5" y="10" width="15" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.8-1.2"/>',
+  mappin:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  chart:'<path d="M3 21h18"/><path d="M6 17v-6M11 17V6M16 17v-9M21 17v-3"/>',
+  phone:'<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/>',
+  pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  hourglass:'<path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/>',
+  wallet:'<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/><path d="M6 6V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+  cash:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+  briefcase:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+  arrowin:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/>',
+  arrowout:'<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 21h16"/>',
+  pie:'<path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+};
+const ic = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || IC.grid}</svg>`;
+// departments keep their stored icon value (an emoji in the database); the screen shows a line icon instead
+const DEPT_IC = { "👔":"briefcase", "🏗️":"hardhat", "🏗":"hardhat", "🚚":"truck", "👥":"users", "💰":"wallet", "⚖️":"scale", "⚖":"scale", "🦺":"shield", "🏢":"building", "📄":"file", "🧾":"receipt" };
+const DEPT_ICON_CHOICES = [["🏢","building","عام"], ["👔","briefcase","إدارة"], ["🏗️","hardhat","مشاريع"], ["🚚","truck","أسطول"], ["👥","users","موارد بشرية"], ["💰","wallet","مالية"], ["⚖️","scale","قانونية"], ["🦺","shield","سلامة"], ["📄","file","وثائق"]];
+const deptIc = (v, cls = "") => ic(DEPT_IC[String(v || "").trim()] || "building", cls);
+
+// ===== Charts (SVG drawn here: no external library, works offline and under the page's security policy) =====
+const fmtShort = (n) => new Intl.NumberFormat(LOC(), { notation:"compact", maximumFractionDigits:1 }).format(Number(n) || 0);
+const monthShort = (ym) => { const [y, m] = ym.split("-").map(Number); return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString(DLOC(), { month:"short", timeZone:"UTC" }); };
+function chartBars(series, keys, opt = {}) {
+  // series: [{label, values:{k:number}}], keys: [{k, color, label}]; reading order follows the language
+  const rows = LANG === "en" ? series : [...series].reverse();
+  const W = 640, H = opt.h || 230, pl = 46, pr = 8, pt = 10, pb = 26;
+  const max = Math.max(1, ...rows.flatMap((r) => keys.map((k) => Number(r.values[k.k]) || 0)));
+  const nice = (() => { const p = Math.pow(10, Math.floor(Math.log10(max))); return Math.ceil(max / p) * p; })();
+  const y = (v) => pt + (H - pt - pb) * (1 - v / nice);
+  const gw = (W - pl - pr) / rows.length, bw = Math.min(18, (gw * 0.7) / keys.length);
+  const grid = [0, .25, .5, .75, 1].map((f) => `<line x1="${pl}" x2="${W - pr}" y1="${y(nice * f)}" y2="${y(nice * f)}" style="stroke:var(--line)"/>
+    <text x="${pl - 6}" y="${y(nice * f) + 4}" text-anchor="end">${fmtShort(nice * f)}</text>`).join("");
+  const hl = opt.highlight ?? -1;
+  const bars = rows.map((r, i) => {
+    const x0 = pl + gw * i + (gw - bw * keys.length) / 2;
+    const isHl = hl >= 0 && r === series[hl];
+    return keys.map((k, j) => { const v = Number(r.values[k.k]) || 0;
+      return `<rect x="${x0 + j * bw}" y="${y(v)}" width="${bw - 2}" height="${Math.max(0, y(0) - y(v))}" rx="3" style="fill:${k.color};opacity:${hl < 0 || isHl ? 1 : .5}"><title>${esc(r.label)} · ${esc(k.label)}: ${fmtNum(v)}</title></rect>`; }).join("")
+      + `<text x="${pl + gw * i + gw / 2}" y="${H - 8}" text-anchor="middle">${esc(r.label)}</text>`;
+  }).join("");
+  const avg = opt.avgKey ? series.reduce((s, r) => s + (Number(r.values[opt.avgKey]) || 0), 0) / series.length : null;
+  const avgLine = avg ? `<line x1="${pl}" x2="${W - pr}" y1="${y(avg)}" y2="${y(avg)}" style="stroke:var(--muted)" stroke-dasharray="5 4"/>` : "";
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.title || "")}" style="direction:ltr">${grid}${bars}${avgLine}</svg></div>
+    <div class="legend">${keys.map((k) => `<span><i style="background:${k.color}"></i>${esc(k.label)}</span>`).join("")}${avg ? `<span><i class="ln"></i>${esc(opt.avgLabel || "")}</span>` : ""}</div>`;
+}
+function chartDonut(parts, center, sub) {
+  const tot = parts.reduce((s, p) => s + (Number(p.value) || 0), 0);
+  const R = 52, C = 2 * Math.PI * R; let off = 0;
+  const segs = tot ? parts.filter((p) => p.value > 0).map((p) => { const len = (p.value / tot) * C;
+    const s = `<circle cx="70" cy="70" r="${R}" fill="none" style="stroke:${p.color}" stroke-width="18" stroke-dasharray="${Math.max(0, len - 2)} ${C}" stroke-dashoffset="${-off}"><title>${esc(p.label)}: ${fmtNum(p.value)}</title></circle>`;
+    off += len; return s; }).join("") : "";
+  return `<div class="donut"><svg viewBox="0 0 140 140" role="img"><g transform="rotate(-90 70 70)"><circle cx="70" cy="70" r="${R}" fill="none" style="stroke:var(--panel2)" stroke-width="18"/>${segs}</g>
+      <text x="70" y="68" text-anchor="middle" style="fill:var(--text);font-size:22px;font-weight:700;font-family:inherit">${esc(center)}</text>
+      <text x="70" y="88" text-anchor="middle" style="fill:var(--muted);font-size:11px;font-family:inherit">${esc(sub)}</text></svg>
+    <div class="dl">${parts.map((p) => `<div><i style="background:${p.color}"></i><span>${esc(p.label)}</span><b>${tot ? Math.round((p.value / tot) * 100) : 0}%</b></div>`).join("")}</div></div>`;
+}
+function chartHBars(rows, stacked = false) {
+  // rows: [{label, value, max, color, text, go}] ; go = fixed view key (validated by the caller), never free text
+  const max = Math.max(1, ...rows.map((r) => r.max ?? r.value));
+  return `<div class="hb ${stacked ? "st" : ""}">${rows.map((r) => `<div class="r ${r.go ? "clk" : ""}" ${r.go ? `onclick="${r.go}"` : ""}><span class="nm" title="${esc(r.label)}">${esc(r.label)}</span>
+      <span class="trk"><i style="width:${Math.max(0, Math.min(100, ((Number(r.value) || 0) / (r.max ?? max)) * 100))}%;background:${r.color || "var(--green)"}"></i></span><span class="vv">${esc(r.text ?? fmtNum(r.value))}</span></div>`).join("")}</div>`;
+}
+
+const EN = {"منصة الشركة": "Company platform","يقين": "Yaqen","عام": "General","إدارة": "Management","مشاريع": "Projects","أسطول": "Fleet","موارد بشرية": "Human resources","مالية": "Finance","قانونية": "Legal","سلامة": "Safety","وثائق": "Documents","شغالة": "Running","متوقفة": "Stopped","صيانة": "Maintenance","جاري": "In progress","متأخر": "Late","مكتمل": "Completed","معلق": "On hold","يقين للأعمال": "Yaqen Business","بدون قسم": "No department","الأسطول والمعدات": "Fleet & equipment","مركبة": "Vehicle","معدة": "equipment","السائق": "Driver","رقم اللوحة": "Plate number","النوع": "Type","ونيت": "pickup","رافعة": "crane","شيول": "loader","الموديل والسنة": "Model and year","الحالة": "Status","اسم السائق": "Driver name","جوال السائق": "Driver mobile","الموقع الحالي": "Current location","مثال": "Example","موقع أرامكو": "Aramco site","أبقيق": "Abqaiq","انتهاء الاستمارة": "Registration expiry","انتهاء التأمين": "Insurance expiry","انتهاء رخصة السائق": "Driver licence expiry","ملاحظات": "Notes","المشاريع": "Projects","مشروع": "project","اسم المشروع": "Project name","العميل": "Client","رقم أمر الشراء": "Purchase order number","قيمة العقد": "Contract value","نسبة الإنجاز": "Progress","تاريخ البداية": "Start date","تاريخ التسليم": "Delivery date","القضايا": "Legal cases","قضية": "case","القانونية": "Legal","رقم": "No.","المحامي": "Lawyer","مفتوحة": "Open","قيد النظر": "Under review","مؤجلة": "Postponed","مغلقة": "Closed","عنوان القضية": "Case title","رقم القضية": "Case number","المحكمة": "Court","الجهة": "Party","الطرف الآخر": "Other party","المحامي المسؤول": "Responsible lawyer","الجلسة القادمة": "Next hearing","آخر المستجدات": "Latest update","الفواتير": "Invoices","فاتورة": "invoice","المالية": "Finance","مدفوعة": "Paid","غير مدفوعة": "Unpaid","متأخرة": "Overdue","رقم الفاتورة": "Invoice number","صادرة": "Issued","واردة": "Incoming","المبلغ": "Amount","تاريخ الاستحقاق": "Due date","الوثائق والتراخيص": "Documents & licences","وثيقة": "document","السلامة والامتثال": "Safety & compliance","اسم الوثيقة": "Document name","السجل التجاري": "Commercial registration","تأهيل أرامكو": "Aramco qualification","شهادة سلامة": "safety certificate","تاريخ الانتهاء": "Expiry date","الطلبات": "Requests","طلب": "request","جديد": "New","قيد التنفيذ": "In progress","معتمد": "Approved","مرفوض": "Rejected","منجز": "Done","عنوان الطلب": "Request title","التفاصيل": "Details","الأولوية": "Priority","عاجل": "Urgent","عادي": "Normal","منخفض": "Low","خطأ في التحميل": "Loading error","الذكاء الاصطناعي غير مفعّل بعد": "AI is not enabled yet","يحتاج المسؤول إضافة مفتاح": "the administrator needs to add the key","في إعدادات": "in the settings of","منتهي منذ": "expired","يوم": "days","بعد": "in","جلسة قضية": "Case hearing","متأخر أو تجاوز موعد التسليم": "late or past its delivery date","طلب عاجل": "Urgent request","ملاحظة مدير بانتظار الرد": "Manager note awaiting a reply","الوضع الفاتح": "Light mode","الوضع الداكن": "Dark mode","العربية": "Arabic","منصة الإدارة الذكية": "Smart management platform","تسجيل الدخول": "Sign in","حساب جديد": "New account","البريد الإلكتروني": "Email","كلمة المرور": "Password","إظهار كلمة المرور": "Show password","دخول": "Sign in","نسيت كلمة المرور": "Forgot your password","اكتب كلمة المرور الجديدة": "Enter your new password","كلمة المرور الجديدة": "New password","أحرف أو أكثر": "characters or more","حفظ والدخول": "Save and sign in","رمز الشركة": "Company code","تاخذه من مدير شركتك": "from your company manager","تحقق": "Check","ستسجل كمدير الشركة": "you will register as the company manager","الاسم الكامل": "Full name","المسمى الوظيفي": "Job title","مدير الشركة هو اللي يحدد قسمك ويوافق على حسابك": "Your company manager assigns your department and approves your account","رقم الجوال": "Mobile number","إنشاء الحساب": "Create account","تعذّر الاتصال بخادم المنصة": "Could not reach the platform server","افتح المنصة من رابطها على الإنترنت": "Open the platform from its web address","مثل": "such as","وليس من معاينة الملف": "and not from a file preview","إعادة المحاولة": "Try again","مدعوم بتقنية": "Powered by","مسؤول المنصة": "Platform admin","لوحة يقين": "Yaqen console","كل الشركات": "all companies","ملفي الشخصي": "My profile","الشركة": "Company","لوحة القيادة": "Dashboard","مساعد يقين الذكي": "Yaqen AI assistant","المساعد التنفيذي": "Executive assistant","غرف العمليات": "Operation rooms","ملاحظات المدير": "Manager notes","الأقسام": "Departments","قسمي": "My department","الموظفين": "Employees","العمليات": "Operations","الحوكمة": "Governance","الربط مع": "Connect","سجل التدقيق": "Audit log","سلة المحذوفات": "Trash","رسائل الواتساب": "WhatsApp messages","الحساب": "Account","إعدادات الشركة": "Company settings","غرفة عمليات": "Operation room","إعدادات المنصة": "Platform settings","مدير الشركة": "Company manager","تسجيل الخروج": "Sign out","التنبيهات": "Notifications","شركتك تلزم المدراء بالتحقق الثنائي": "Your company requires managers to use two-factor authentication","صلاحيات المدير موقوفة لين تفعّله من": "Manager permissions are paused until you enable it from","ملفك الشخصي": "your profile","ثم تسجل دخول من جديد": "and then sign in again","تشاهد شركة": "You are viewing","بصلاحية مسؤول المنصة": "with platform admin rights","رجوع لكل الشركات": "Back to all companies","اسأل مساعد يقين": "Ask the Yaqen assistant","قص الصورة": "Crop photo","إغلاق": "Close","تكبير وتصغير": "Zoom","اسحب الصورة بإصبعك عشان تحركها داخل الدائرة": "Drag the photo to position it inside the circle","حفظ الصورة": "Save photo","إلغاء": "Cancel","غرف نقاش لموضوع محدد": "Discussion rooms for a specific topic","محادثة": "chat","رسائل صوتية": "voice messages","صور ومستندات": "photos and documents","مع تلخيص ذكي للقرارات": "with smart summaries of decisions","غرفة عمليات جديدة": "New operation room","عضو": "members","ما فيه غرف عمليات للحين": "No operation rooms yet","سوّ غرفة لموضوع معين": "Create a room for a specific topic","تعطل معدة في موقع أبقيق": "equipment breakdown at the Abqaiq site","وأضف الموظفين المعنيين": "and add the employees involved","الغرفة غير موجودة أو ما عندك صلاحية عليها": "The room does not exist or you have no access to it","رجوع": "Back","لخّص النقاش": "Summarise discussion","إرفاق صورة أو مستند": "Attach a photo or document","رسالة صوتية": "Voice message","اكتب رسالة": "Write a message","إرسال": "Send","هذه الغرفة مغلقة": "This room is closed","إعادة فتحها": "reopen it","عربي": "Arabic","اردو": "Urdu","مترجم من": "Translated from","جاري الترجمة": "Translating","ترجمة": "Translate","ملخص يقين الذكي": "Yaqen AI summary","صورة": "Photo","اضغط للفتح": "tap to open","نشره": "posted by","مستخدم": "User","ابدأ النقاش": "Start the discussion","تقدر ترسل نص": "You can send text","صور": "photos","مستندات": "documents","أو رسالة صوتية": "or a voice message","خطأ": "Error","الملف أكبر من": "The file is larger than","ميجا": "MB","خطأ في الرفع": "Upload error","جاري رفع": "Uploading","جهازك ما يدعم التسجيل الصوتي من المتصفح": "Your device does not support voice recording in the browser","اسمح للمتصفح باستخدام المايكروفون": "Allow the browser to use the microphone","جاري التسجيل": "Recording","إرسال التسجيل": "Send recording","كل الشركات المشتركة في المنصة": "All companies subscribed to the platform","كل شركة معزولة ببياناتها وموظفيها": "each company is isolated with its own data and staff","وأنت تقدر تدخل أي شركة": "and you can open any company","شركة جديدة": "New company","أحداث النظام": "System events","دعوة مسؤول منصة": "Invite platform admin","الشركات": "Companies","شركات فعّالة": "Active companies","إجمالي المستخدمين": "Total users","مدير": "Manager","محذوفة": "Deleted","قابلة للاسترجاع": "restorable","فعّالة": "Active","موقوفة": "Suspended","رمز الموظفين": "Employee code","رمز المدير": "Manager code","دخول الشركة": "Open company","ما فيه شركات للحين": "No companies yet","أضف أول شركة": "Add the first company","وبيطلع لك رمزين": "and you will get two codes","رمز تعطيه لمدير الشركة عشان يسجل كمدير": "one for the company manager to register as manager","ورمز يوزعه المدير على موظفينه": "and one the manager shares with employees","عن الشهر السابق": "vs last month","صباح الخير": "Good morning","مساء الخير": "Good evening","متوقفة أو صيانة": "Stopped or maintenance","لم يحن موعدها": "Not yet due","متأخرة أكثر من": "Overdue more than","تحديث": "Refresh","مستحقات لم تُحصّل": "Uncollected receivables","فواتير متأخرة": "overdue invoices","لا توجد فواتير متأخرة": "No overdue invoices","فواتير صادرة هذا الشهر": "Invoiced this month","المحصّل هذا الشهر": "Collected this month","من الصادرة": "of issued","تنبيهات عاجلة": "Urgent alerts","تنبيه إجمالاً": "alerts in total","مشاريع جارية": "Active projects","متوسط الإنجاز": "Average progress","معدات شغالة": "Equipment running","كلها شغالة": "All running","أقسام": "departments","بانتظار الموافقة": "awaiting approval","قضايا مفتوحة": "Open legal cases","الفوترة الشهرية": "Monthly invoicing","آخر": "Last","شهر": "months","حسب تاريخ الاستحقاق": "by due date","للعملاء": "to clients","من الموردين": "from suppliers","متوسط الصادرة": "Average issued","الرسم غير متاح حالياً": "Chart not available yet","حالة المعدات": "Equipment status","لا توجد معدات مسجلة": "No equipment recorded","تقادم المستحقات": "Receivables aging","لا توجد مستحقات غير محصّلة": "No uncollected receivables","حسب القسم": "By department","تقدّم المشاريع": "Project progress","أضف أول مشروع": "Add your first project","المشاريع حسب الحالة": "Projects by status","لا توجد مشاريع": "No projects","الوثائق والتأمين والاستمارات والرخص": "Documents, insurance, registrations and licences","منتهية": "Expired","خلال": "Within","يحتاج انتباهك": "Needs your attention","لا توجد تنبيهات": "No alerts","كل شيء تحت السيطرة": "everything is under control","موظف": "employees","سجل": "records","التقرير التنفيذي الذكي": "Smart executive brief","يقرأ يقين كل بيانات الشركة ويطلع لك المخاطر قبل ما تصير": "Yaqen reads all company data and flags risks before they happen","ويقترح عليك قرارات اليوم": "and suggests today's decisions","حلّل وضع الشركة الآن": "Analyse the company now","عالي": "High","متوسط": "Medium","مؤشر صحة الشركة": "Company health score","تحليل يقين": "Yaqen analysis","المخاطر": "Risks","لا توجد مخاطر واضحة": "No clear risks","قرارات مقترحة لليوم": "Suggested decisions for today","أرسلها ملاحظة لـ": "Send as a note to","ملاحظات ذكية": "Smart insights","وش أهم": "What are the top","أشياء لازم أتابعها اليوم": "things I should follow up today","كم سيارة متوقفة ووين مواقعها": "How many vehicles are stopped and where are they","وش الوثائق اللي بتنتهي خلال شهر": "Which documents expire within a month","لخص لي وضع القضايا": "Summarise the legal cases","كم مستحقاتنا اللي ما انسددت": "How much of our receivables is unpaid","أي مشروع فيه خطر تأخير": "Which project is at risk of delay","اسألني أي شي عن الشركة بالعربي": "Ask me anything about the company","أنا مطلع على الموظفين والأسطول والمشاريع والقضايا والفواتير والوثائق": "I can see employees, fleet, projects, cases, invoices and documents","في كل الأقسام": "in all departments","في قسمك": "in your department","اكتب سؤالك": "Type your question","تم الرد": "Replied","منجزة": "Done","ملاحظة لقسم": "Note to a department","ملاحظات المدير الموجهة لقسمك": "Manager notes for your department","رد عليها ليتابعها المدير": "reply so the manager can follow up","المطلوب قبل": "Due before","رد القسم": "Department reply","تعديل الرد": "Edit reply","رد": "Reply","إغلاق كمنجزة": "Close as done","حذف": "Delete","لا توجد ملاحظات بعد": "No notes yet","لم يتم تحديد قسمك بعد": "Your department has not been set yet","حدّث ملفك الشخصي": "update your profile","ملفي": "My profile","ملاحظة لهذا القسم": "Note to this department","عرض سجلات القسم": "View department records","لا يوجد موظفين": "No employees","تنبيهات القسم": "Department alerts","الرد": "Reply","لا توجد ملاحظات": "No notes","بدون اسم": "No name","طلبات انضمام بانتظار موافقتك": "Join requests awaiting your approval","ما يقدر الموظف يشوف أي بيانات قبل ما توافق وتحدد قسمه": "The employee cannot see any data until you approve and assign a department","سجّل": "registered","اختر القسم": "Choose department","موافقة": "Approve","رفض": "Reject","بحث بالاسم أو القسم": "Search by name or department","تشاهد زملاءك في قسمك فقط": "You see colleagues in your department only","موقوف": "Suspended","السابق": "Previous","صفحة": "Page","من": "of","التالي": "Next","بحث في كل السجلات": "Search all records","كل الحالات": "All statuses","قسم": "Department","عرض الكل": "Show all","لا توجد نتائج مطابقة": "No matching results","لا توجد سجلات بعد": "No records yet","إضافة": "Add","أو صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات": "or photograph the document and let AI fill in the data","منتهي": "expired","إلى": "to","قارن هذا الشهر بالشهر السابق": "Compare this month with last month","قارن الشهر الماضي بالذي قبله": "Compare last month with the month before","قارن هذا الشهر بنفس الشهر من السنة الماضية": "Compare this month with the same month last year","ما المشاريع المتأخرة": "Which projects are late","ما الفواتير المتأخرة": "Which invoices are overdue","ما الالتزامات التي تنتهي قريباً": "Which obligations expire soon","ما المشاريع التي تجاوزت ميزانيتها": "Which projects are over budget","لا توجد ميزانيات أو تكاليف للمشاريع في يقين": "Yaqen has no project budgets or costs","ما أكثر مشروع يحقق ربحية": "Which project is most profitable","الفواتير غير مربوطة بالمشاريع": "Invoices are not linked to projects","ولا توجد تكاليف مشاريع": "and there are no project costs","قارن مصروفات المواقع": "Compare site expenses","لا يوجد دفتر مصروفات ولا كيان للمواقع في يقين": "Yaqen has no expense ledger and no site entity","ما المعدات الأعلى تكلفة": "Which equipment costs the most","تكاليف المعدات غير مسجلة في يقين": "Equipment costs are not recorded in Yaqen","اختر سؤالاً": "Choose a question","الأرقام تُحسب من سجلات يقين مباشرة وحسب صلاحياتك": "Numbers are computed directly from Yaqen records within your permissions","بدون تقدير أو تخمين": "with no estimates or guesses","السؤال الحر متاح عبر موصل يقين في": "Free-form questions are available through the Yaqen connector in","غير متاح": "Not available","تقرير مقارنة كامل": "Full comparison report","يفتح الشاشة المناسبة": "Opens the relevant screen","إيرادات مفوترة": "Invoiced revenue","فواتير صادرة": "issued invoices","فواتير الموردين": "Supplier invoices","صافي الفوترة": "Net invoicing","الصادرة ناقص الواردة": "issued minus incoming","المحصّل من الصادرة": "Collected from issued","حالتها مدفوعة": "status paid","غير المحصّل من الصادرة": "Uncollected from issued","جاري حساب التقرير": "Calculating the report","رجوع للأسئلة": "Back to questions","الأسئلة": "Questions","طباعة": "Print","حفظ": "Save","مقابل": "vs","العملة": "Currency","ريال": "SAR","وقت الحساب": "Calculated at","آخر تحديث للفواتير": "Invoices last updated","لا يوجد": "None","الشهر الحالي لم يكتمل بعد": "The current month is not over yet","الأرقام تشمل الفواتير المستحقة حتى نهاية الشهر المسجلة حتى الآن": "figures include invoices due by month end that are recorded so far","لا توجد فواتير ضمن صلاحياتك في هاتين الفترتين": "No invoices within your permissions in these two periods","صافي الربح": "Net profit","المعروض بدلاً منه": "Shown instead","المؤشر": "Indicator","التغير": "Change","النسبة": "Percent","اعرض الفواتير": "Show invoices","عدد الفواتير": "Number of invoices","تعني أن قيمة فترة المقارنة صفر": "means the comparison period value is zero","فالنسبة غير معرّفة": "so the percentage is undefined","اضغط على أي مؤشر لعرض الفواتير التي يتكون منها": "Click any indicator to see the invoices behind it","الرسم البياني": "Chart","أكبر العملاء": "Top clients","القسم": "Department","اكتمال البيانات": "Data completeness","فواتير بدون تاريخ استحقاق": "Invoices without a due date","لم تُحسب في أي فترة": "not counted in any period","تحليل ربحية المشاريع وأسباب التغير غير متاحة": "Project profitability and reasons for change are not available","ولا توجد تكاليف مسجلة": "and no costs are recorded","التقرير يعرض ما تسمح به صلاحياتك فقط": "The report shows only what your permissions allow","المجموع": "Total","معروض أول": "showing first","الرقم": "Number","الاستحقاق": "Due","تعذر حساب التقرير": "Could not calculate the report","لا توجد شركة مرتبطة بحسابك": "No company is linked to your account","حاول مرة ثانية": "please try again","المركبات": "Vehicles","المستندات": "Documents","الغرف": "Rooms","رسائل الغرف": "Room messages","أعضاء الغرف": "Room members","تعديل": "Edit","حذف نهائي": "Permanent delete","نقل للسلة": "Moved to trash","استرجاع": "Restore","المنصة": "Platform","الذكاء الاصطناعي": "AI","النظام": "System","كل الأقسام": "All sections","كل العمليات": "All actions","كل تعديل أو حذف أو استرجاع يتسجل تلقائياً من قاعدة البيانات": "Every edit, delete or restore is recorded automatically by the database","وما أحد يقدر يعدل هذا السجل أو يحذفه": "and nobody can edit or delete this log","لا توجد عمليات مسجلة": "No recorded actions","العناصر المحذوفة تبقى هنا": "Deleted items stay here for","يوم وتقدر تسترجعها": "days and you can restore them","بعدها تنحذف نهائياً": "after that they are deleted permanently","السلة فاضية": "Trash is empty","بانتظار المراجعة": "Awaiting review","رقم غير معروف": "Unknown number","تمت المعالجة": "Processed","مرفوضة": "Rejected","الرسائل الواردة من الواتساب تنتظر هنا مراجعتك قبل ما تدخل في بيانات الشركة": "Incoming WhatsApp messages wait here for your review before they enter company data","الربط الفعلي مع واتساب يحتاج حساب": "The actual WhatsApp connection needs a","لم يُفعّل بعد": "not enabled yet","لا توجد رسائل بانتظار المراجعة": "No messages awaiting review","استهلاك الذكاء الاصطناعي هذا الشهر": "AI usage this month","الحد اليومي لكل موظف": "daily limit per employee","تعديل الميزانية يتم عن طريق يقين": "Budget changes are made by Yaqen","تعذر تحميل الاستهلاك": "Could not load usage","ملخص الشركة": "Company overview","الأعداد والمستحقات والتنبيهات العاجلة": "Counts, receivables and urgent alerts","الحالة ونسبة الإنجاز وأيام التأخير وقيمة العقد": "Status, progress, days late and contract value","المبالغ والاستحقاق والمتأخرات والتقادم": "Amounts, due dates, overdue and aging","مقارنة الفترات": "Period comparison","الفواتير الصادرة والواردة بين فترتين ونسبة التغير": "Issued and incoming invoices between two periods and the change","المعدات والمركبات": "Equipment & vehicles","الحالة والموقع وتواريخ الاستمارة والتأمين": "Status, location, registration and insurance dates","الوثائق والانتهاءات": "Documents & expiries","ما ينتهي قريباً": "What expires soon","تأمين": "insurance","رخص": "licences","جلسات قضايا": "case hearings","الموظفون": "Employees","الأسماء والمسميات والأقسام": "Names, titles and departments","بدون جوال أو بريد": "without mobile or email","الملاحظات والغرف": "Notes & rooms","الملاحظات المفتوحة ونشاط الغرف": "Open notes and room activity","بدون نصوص الرسائل": "without message texts","البحث": "Search","يبحث فقط داخل الأنواع المسموحة أعلاه": "Searches only within the types allowed above","تفاصيل مشروع": "Project detail","المعدات": "Equipment","الانتهاءات": "Expiries","غير مسموح": "Not allowed","الربط موقوف": "Connection paused","انتهى": "Expired","ملغى": "Revoked","تجاوز الحد": "Rate limited","تجاوز الحد اليومي": "Daily limit reached","حساب غير مفعّل": "Inactive account","ربط": "Connecting","غير مفعّل على الخادم بعد": "is not enabled on the server yet","تواصل مع يقين لتفعيله": "Contact Yaqen to enable it","في": "In","افتح": "open","الإعدادات": "Settings","اضغط": "Click","والصق رابط يقين": "and paste the Yaqen link","وسجّل دخولك بحسابك في يقين": "and sign in with your Yaqen account","قراءة فقط": "read only","وارجع لـ": "and return to","اسأل": "Ask","عن شركتك": "about your company","مفعّل": "Enabled","كل مدير أو موظف يربط حسابه في": "Each manager or employee connects their account in","ويسأل بالعربي عن المشاريع والفواتير والمعدات": "and asks about projects, invoices and equipment","يقرأ فقط ما تسمح به هنا وما تسمح به صلاحيات المستخدم في يقين": "It reads only what you allow here and what the user's Yaqen permissions allow","لا يقدر يضيف أو يعدّل أو يحذف أي شيء": "It cannot add, edit or delete anything","والتكلفة على اشتراك المستخدم في": "and the cost is on the user's subscription to","رابط الموصل": "Connector link","نسخ": "Copy","وش يقدر": "What can","يقرأ": "read","تفعيل الربط مع": "Enable the connection with","لكل الشركة": "for the whole company","ينتهي الربط تلقائياً بعد": "The connection expires automatically after","بدون استخدام": "without use","آخر تعديل": "Last changed","الاستخدام آخر": "Usage, last","طلبات": "Requests","أجهزة مربوطة": "Connected devices","لا يوجد استخدام بعد": "No usage yet","الحسابات المربوطة": "Connected accounts","لا يوجد أي حساب مربوط بـ": "No account is connected to","حالياً": "right now","المستخدم": "User","التطبيق": "App","آخر استخدام": "Last used","منذ": "since","نشط": "Active","حتى": "until","إلغاء الربط": "Disconnect","آخر الطلبات": "Recent requests","تم": "Done","اختر نوع بيانات واحد على الأقل": "Choose at least one data type","أو أوقف الربط": "or turn the connection off","تم الحفظ يطبَّق على": "Saved. Applies to","فوراً": "immediately","إلغاء ربط": "Disconnect","لحساب": "for","يتوقف فوراً": "It stops immediately","ويقدر يربط من جديد لاحقاً": "and they can reconnect later","تم إلغاء الربط": "Disconnected","تم نسخ الرابط": "Link copied","تم الاسترجاع": "Restored","تحديد الكل كمقروء": "Mark all as read","فتح": "Open","أحداث النظام والأخطاء": "System events and errors","لا توجد أحداث": "No events","الشخص المدعو يسجل حساب جديد بنفس البريد": "The invited person signs up with the same email","بدون رمز شركة": "without a company code","ويصير مسؤول منصة": "and becomes a platform admin","صلاحيته كاملة على كل الشركات": "they have full access to all companies","فادعُ فقط من تثق فيه": "so invite only people you trust","إرسال الدعوة": "Send invitation","تم حفظ الدعوة": "Invitation saved","تغيير الصورة": "Change photo","الجوال": "Mobile","تغيير القسم يتم عن طريق المدير": "Department changes are made by the manager","تغيير كلمة المرور": "Change password","إظهار": "Show","تغيير": "Change","التحقق الثنائي": "Two-factor authentication","هوية المنصة": "Platform identity","اسم المنصة يظهر لكل موظفي الشركة": "The platform name is shown to all company employees","رمز تسجيل الموظفين": "Employee sign-up code","أرسله لموظفينك": "send it to your employees","رمز تسجيل المدير": "Manager sign-up code","توليد رمز جديد": "Generate a new code","الرمز الحالي بيتوقف فوراً": "The current code stops working immediately","رمز جديد": "New code","رفع شعار الشركة": "Upload company logo","اسم المنصة": "Platform name","اسم قسم جديد": "New department name","صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات": "Photograph the document and let AI fill in the data","القسم المسؤول": "Responsible department","آخر تحديث": "Last updated","أضافه": "added by","تم التحديث": "Refreshed","إدارة الشركة": "Manage company","اسم الشركة": "Company name","اسم المنصة لها": "its platform name","ملاحظات داخلية": "Internal notes","تظهر لك فقط": "visible to you only","جهة التواصل": "Contact","الباقة": "plan","تاريخ الاشتراك": "subscription date","ميزانية الذكاء الاصطناعي الشهرية": "Monthly AI budget","حد طلبات الذكاء الاصطناعي لكل موظف يومياً": "Daily AI requests per employee","إلزام مدراء الشركة بالتحقق الثنائي": "Require two-factor authentication for company managers","فعّله بعد ما يضيف المدير تطبيق المصادقة من ملفه الشخصي": "enable it after the manager adds an authenticator app in their profile","توليد رموز جديدة": "Generate new codes","بيتم إنشاء": "This creates","أقسام افتراضية للشركة": "default departments","ورمزين للتسجيل": "and two sign-up codes","إنشاء الشركة": "Create company","إيقاف الشركة": "Suspend company","تفعيل الشركة": "Activate company","استرجاع الشركة": "Restore company","تم توليد رمز موظفين جديد": "A new employee code was generated","الرمز القديم ما عاد يشتغل": "the old code no longer works","تم توليد رموز جديدة": "New codes were generated","الرموز القديمة ما عادت تشتغل": "the old codes no longer work","تم تفعيل الشركة": "Company activated","تم إيقاف الشركة": "Company suspended","موظفينها ما يقدرون يشوفون البيانات": "its employees cannot see the data","بتتوقف الشركة فوراً": "The company stops immediately","وتقدر تسترجعها خلال": "and you can restore it within","بعدها تنحذف نهائياً مع بياناتها": "after that it is deleted permanently with its data","تم استرجاع الشركة": "Company restored","اكتب بريدك الإلكتروني أولاً ثم اضغط نسيت كلمة المرور": "Enter your email first, then click Forgot password","انتظر دقيقة ثم حاول مرة ثانية": "Wait a minute and try again","أرسلنا لك رابط على بريدك": "We sent a link to your email","افتحه من نفس الجهاز": "open it on the same device","وبيطلب منك كلمة مرور جديدة": "and it will ask for a new password","كلمة المرور لازم تكون": "The password must be","تم تغيير كلمة المرور": "Password changed","البريد أو كلمة المرور غير صحيحة": "Incorrect email or password","فعّل حسابك من الرابط اللي وصلك على البريد أولاً": "Activate your account from the link in your email first","محاولات كثيرة": "Too many attempts","انتظر": "Wait","دقيقة ثم حاول مرة ثانية": "minutes and try again","رمز الشركة غير صحيح": "Incorrect company code","هذا البريد مسجل مسبقاً": "This email is already registered","أو لا توجد دعوة لهذا البريد": "or there is no invitation for this email","تم إنشاء الحساب فعّل حسابك من الرابط اللي وصلك على بريدك": "Account created. Activate it from the link in your email","ثم سجّل دخولك": "then sign in","بعدها ينتظر حسابك موافقة مدير الشركة": "after that your account waits for the company manager's approval","السجل غير موجود أو محذوف": "The record does not exist or was deleted","تم الحفظ": "Saved","نقل السجل إلى سلة المحذوفات": "Move the record to the trash","تقدر تسترجعه خلال": "You can restore it within","نُقل إلى سلة المحذوفات": "Moved to the trash","يقين يقرأ المستند": "Yaqen is reading the document","تم تعبئة": "Filled","حقول تلقائياً": "fields automatically","راجعها ثم احفظ": "review them, then save","ما قدرت أقرأ بيانات واضحة من الصورة": "Could not read clear data from the photo","يقين يحلل بيانات الشركة": "Yaqen is analysing company data","الموضوع": "Subject","الملاحظة": "Note","اختياري": "optional","إرسال للقسم": "Send to department","تم إرسال الملاحظة": "Note sent","الرد على الملاحظة": "Reply to note","ردك": "Your reply","إرسال الرد": "Send reply","اقترح رد": "Suggest a reply","تم إرسال الرد": "Reply sent","نقل الملاحظة إلى سلة المحذوفات": "Move the note to the trash","بيانات الموظف": "Employee details","انضم": "Joined","الاسم": "Name","المسمى": "Title","الصلاحية": "Role","وصول كامل": "full access","إعادة تفعيل": "Reactivate","إيقاف الحساب": "Suspend account","حذف المستخدم": "Delete user","تم تفعيل الحساب": "Account activated","إيقاف حساب": "Suspend the account of","ما يقدر يدخل لين تعيد تفعيله": "They cannot sign in until you reactivate it","تم التفعيل": "Activated","تم إيقاف الحساب": "Account suspended","نهائياً من المنصة": "permanently from the platform","ما يقدر يدخل بعدها": "They will not be able to sign in","تم حذف المستخدم": "User deleted","تم تحديث الصورة": "Photo updated","أعضاء الغرفة": "Room members","مغادرة الغرفة": "Leave room","إدارة الغرفة": "Manage room","موضوع الغرفة": "Room topic","تعطل الرافعة في موقع أبقيق": "crane breakdown at the Abqaiq site","وصف مختصر": "Short description","الأعضاء": "Members","اختر الموظفين المعنيين": "choose the employees involved","ما فيه موظفين آخرين في الشركة للحين": "no other employees in the company yet","بحث": "Search","إنشاء الغرفة": "Create room","إغلاق الغرفة": "Close room","فتح الغرفة": "Open room","تم إنشاء الغرفة": "Room created","حذف الغرفة وكل رسائلها نهائياً": "Delete the room and all its messages permanently","تبي تغادر الغرفة": "Do you want to leave the room","يلخّص": "Summarising","ملخص النقاش": "Discussion summary","انشر الملخص في الغرفة": "Post the summary in the room","تم رفع الشعار": "Logo uploaded","حذف القسم": "Delete the department","الموظفين والسجلات فيه بتصير بدون قسم": "Its employees and records will have no department","عند الدخول بنطلب منك رمز من تطبيق المصادقة": "At sign-in we will ask for a code from your authenticator app","إلغاء التحقق الثنائي": "Turn off two-factor authentication","يحمي حسابك لو انسرقت كلمة المرور": "Protects your account if your password is stolen","تحتاج تطبيق مصادقة في جوالك": "You need an authenticator app on your phone","أو": "or","ننصح فيه بقوة لحسابات المدراء": "Strongly recommended for manager accounts","تفعيل التحقق الثنائي": "Enable two-factor authentication","افتح تطبيق المصادقة وامسح الرمز": "Open the authenticator app and scan the code","أو اكتب المفتاح يدوياً": "or type the key manually","اكتب الرمز المكوّن من": "Enter the code of","أرقام": "digits","تأكيد": "Confirm","الرمز غير صحيح": "Incorrect code","جرّب الرمز الجديد": "try the new code","تم تفعيل التحقق الثنائي": "Two-factor authentication enabled","حسابك بيصير محمي بكلمة المرور فقط": "Your account will be protected by the password only","سجّل خروج وادخل مرة ثانية برمز التحقق": "Sign out and sign in again with the verification code","ثم ألغِه": "then turn it off","تم الإلغاء": "Turned off","اكتب الرمز من تطبيق المصادقة في جوالك": "Enter the code from the authenticator app on your phone","الرمز غير صحيح أو انتهت صلاحيته": "The code is incorrect or expired","ما قدرنا نلقى ملفك في المنصة": "We could not find your profile on the platform","تواصل مع مدير شركتك": "Contact your company manager","تم إنشاء حسابك في": "Your account was created at","وهو الحين بانتظار موافقة مدير الشركة": "and is now awaiting the company manager's approval","بيحدد قسمك ويفعّل حسابك": "they will set your department and activate your account","بعدها تقدر تدخل": "then you can sign in","حسابك موقوف حالياً": "Your account is currently suspended","حساب شركتك موقوف حالياً": "Your company account is currently suspended","تواصل مع مدير شركتك أو مع يقين": "Contact your company manager or Yaqen","الإدارة العليا": "Senior management","الموارد البشرية": "Human resources","حسب تاريخ استحقاق الفواتير المسجلة في يقين": "By the due date of invoices recorded in Yaqen","لا يوجد في يقين دفتر مصروفات ولا رواتب ولا تكاليف مشاريع": "Yaqen has no expense ledger, payroll or project costs","الفواتير بدون تاريخ إصدار": "Invoices have no issue date","فتُنسب للفترة حسب تاريخ الاستحقاق فقط": "so they are assigned to a period by due date only","الفرق بين الفواتير الصادرة والواردة المستحقة في الفترة": "The difference between issued and incoming invoices due in the period","وهو ليس ربحاً محاسبياً": "which is not accounting profit","فلا يمكن حساب ربحية مشروع": "so project profitability cannot be calculated","غير مصرح": "Not authorised","متأخرة 1-30 يوم": "Overdue 1-30 days","الشهر": "Month","الربط مع Claude": "Claude connection","أنواع البيانات": "Data types","رسائل": "messages"};
+// ===== English: the screens are written in Arabic; in English mode every Arabic text on screen is looked up
+// in EN (whole text first, then each Arabic phrase). User content (messages, notes, AI answers) is left as written.
+// Form values are never changed: an <option> keeps its Arabic value, only the visible label is translated.
+const AR_RUN = /[ء-ٟٮ-ۓ]+(?:[  ‌]+[ء-ٟٮ-ۓ]+)*/g;
+const HAS_AR = /[ء-ٟٮ-ۓ]/;
+const AR_PUNCT = { "،":",", "؛":";", "؟":"?", "٪":"%", "٫":".", "٬":"," };
+function trText(t) {
+  if (LANG !== "en" || !t || !HAS_AR.test(t)) return t;
+  const k = t.trim();
+  if (EN[k] != null) return t.replace(k, EN[k]);
+  let hit = false;
+  const out = t.replace(AR_RUN, (r) => (EN[r] != null ? ((hit = true), EN[r]) : r));
+  return hit ? out.replace(/[،؛؟٪٫٬]/g, (c) => AR_PUNCT[c]) : t;
+}
+const RAW = ".bub,.m .b,[data-raw],textarea,code,script,style";
+function trTree(root) {
+  if (LANG !== "en" || !root) return;
+  if (root.nodeType === 3) { trNode(root); return; }
+  if (root.nodeType !== 1 || root.closest?.(RAW)) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach(trNode);
+  const els = root.matches?.("[placeholder],[title],[aria-label]") ? [root] : [];
+  els.concat([...root.querySelectorAll("[placeholder],[title],[aria-label]")]).forEach((el) => {
+    if (el.closest(RAW) && el.tagName !== "TEXTAREA") return;
+    for (const a of ["placeholder", "title", "aria-label"]) { const v = el.getAttribute(a); if (v && HAS_AR.test(v)) el.setAttribute(a, trText(v)); }
+  });
+}
+function trNode(n) {
+  const p = n.parentElement; if (!p || p.closest(RAW)) return;
+  const v = n.nodeValue; if (!HAS_AR.test(v)) return;
+  const t = trText(v); if (t === v) return;
+  if (p.tagName === "OPTION" && !p.hasAttribute("value")) p.setAttribute("value", p.textContent.trim());   // keep the Arabic value
+  n.nodeValue = t;
+}
+const trObserver = new MutationObserver((list) => {
+  if (LANG !== "en") return;
+  for (const m of list) {
+    if (m.type === "characterData") trNode(m.target);
+    else m.addedNodes.forEach(trTree);
+  }
+});
+trObserver.observe(document.documentElement, { childList:true, subtree:true, characterData:true });
+const confirmT = (m) => confirm(trText(m));
+window.confirmT = confirmT;
+
+const STATUS_COLOR = { "شغالة":"var(--green)", "متوقفة":"var(--red)", "صيانة":"var(--amber)", "جاري":"var(--blue)", "متأخر":"var(--red)", "مكتمل":"var(--green)", "معلق":"var(--amber)" };
+
 const initials = (n) => (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("");
 
 const S = { session:null, me:null, company:null, cid:null, companies:[], allPeople:[], settings:{ company_name:"يقين للأعمال" }, deps:[], people:[], data:{}, view:"home", param:null, chat:[], brief:null, authTab:"login", signupCo:null, urls:{}, rooms:[], roomMembers:[] };
@@ -245,7 +511,7 @@ const depByName = (n) => S.deps.find((d) => d.name === n)?.id;
 
 // ===== Entity definitions =====
 const ENT = {
-  vehicles: { title:"الأسطول والمعدات", icon:"🚚", one:"مركبة / معدة", def:"الأسطول والمعدات", primary:"plate", search:["plate","kind","model","driver_name","location"],
+  vehicles: { title:"الأسطول والمعدات", icon:"truck", one:"مركبة / معدة", def:"الأسطول والمعدات", primary:"plate", search:["plate","kind","model","driver_name","location"],
     sub:(r) => [r.kind, r.model, r.driver_name && "السائق: " + r.driver_name].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "شغالة":"b-green", "متوقفة":"b-red", "صيانة":"b-amber" },
     fields:[
@@ -257,7 +523,7 @@ const ENT = {
       { k:"insurance_expiry", l:"انتهاء التأمين", t:"date", exp:1 },
       { k:"license_expiry", l:"انتهاء رخصة السائق", t:"date", exp:1 },
       { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
-  projects: { title:"المشاريع", icon:"🏗️", one:"مشروع", def:"المشاريع", primary:"name", search:["name","client","po_number"],
+  projects: { title:"المشاريع", icon:"hardhat", one:"مشروع", def:"المشاريع", primary:"name", search:["name","client","po_number"],
     sub:(r) => [r.client, r.po_number && "PO: " + r.po_number].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "جاري":"b-blue", "متأخر":"b-red", "مكتمل":"b-green", "معلق":"b-amber" }, progress:"progress",
     fields:[
@@ -266,7 +532,7 @@ const ENT = {
       { k:"status", l:"الحالة", t:"select", o:["جاري","متأخر","مكتمل","معلق"] },
       { k:"start_date", l:"تاريخ البداية", t:"date" }, { k:"end_date", l:"تاريخ التسليم", t:"date", deadline:1 },
       { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
-  legal_cases: { title:"القضايا", icon:"⚖️", one:"قضية", def:"القانونية", primary:"title", search:["title","case_number","court","opponent","lawyer"],
+  legal_cases: { title:"القضايا", icon:"scale", one:"قضية", def:"القانونية", primary:"title", search:["title","case_number","court","opponent","lawyer"],
     sub:(r) => [r.case_number && "رقم " + r.case_number, r.court, r.lawyer && "المحامي: " + r.lawyer].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "مفتوحة":"b-blue", "قيد النظر":"b-amber", "مؤجلة":"b-amber", "مغلقة":"b-green" },
     fields:[
@@ -275,7 +541,7 @@ const ENT = {
       { k:"status", l:"الحالة", t:"select", o:["مفتوحة","قيد النظر","مؤجلة","مغلقة"] },
       { k:"next_hearing", l:"الجلسة القادمة", t:"date", hearing:1 },
       { k:"last_update", l:"آخر المستجدات", t:"textarea", wide:1 } ] },
-  invoices: { title:"الفواتير", icon:"🧾", one:"فاتورة", def:"المالية", primary:"number", search:["number","party"],
+  invoices: { title:"الفواتير", icon:"receipt", one:"فاتورة", def:"المالية", primary:"number", search:["number","party"],
     sub:(r) => [r.kind, r.party, fmtSAR(r.amount)].filter(Boolean).join(" · "),
     status:"status", statusColor:{ "مدفوعة":"b-green", "غير مدفوعة":"b-amber", "متأخرة":"b-red" },
     fields:[
@@ -283,13 +549,13 @@ const ENT = {
       { k:"party", l:"الجهة" }, { k:"amount", l:"المبلغ (ر.س)", t:"number" },
       { k:"due_date", l:"تاريخ الاستحقاق", t:"date", due:1 },
       { k:"status", l:"الحالة", t:"select", o:["غير مدفوعة","مدفوعة","متأخرة"] } ] },
-  documents: { title:"الوثائق والتراخيص", icon:"📄", one:"وثيقة", def:"السلامة والامتثال", primary:"name", search:["name","doc_type"],
+  documents: { title:"الوثائق والتراخيص", icon:"file", one:"وثيقة", def:"السلامة والامتثال", primary:"name", search:["name","doc_type"],
     sub:(r) => [r.doc_type].filter(Boolean).join(" · "),
     fields:[
       { k:"name", l:"اسم الوثيقة", req:1, wide:1, ph:"السجل التجاري، تأهيل أرامكو، شهادة سلامة..." },
       { k:"doc_type", l:"النوع" }, { k:"expiry_date", l:"تاريخ الانتهاء", t:"date", exp:1 },
       { k:"notes", l:"ملاحظات", t:"textarea", wide:1 } ] },
-  requests: { title:"الطلبات", icon:"📥", one:"طلب", def:null, primary:"title", search:["title","details"],
+  requests: { title:"الطلبات", icon:"inbox", one:"طلب", def:null, primary:"title", search:["title","details"],
     sub:(r) => (r.details || "").slice(0, 90),
     status:"status", statusColor:{ "جديد":"b-blue", "قيد التنفيذ":"b-amber", "معتمد":"b-green", "مرفوض":"b-red", "منجز":"b-green" },
     fields:[
@@ -341,6 +607,7 @@ async function loadAll() {
     rpc("department_summary", { cid }),
     sb.from("projects").select("id,name,status,progress,end_date").eq("company_id", cid).neq("status", "مكتمل").order("end_date", { ascending:true, nullsFirst:false }).limit(6),
   ]);
+  S.charts = await rpc("dashboard_charts", { cid }).catch(() => null);   // older servers: the home page falls back to the basic numbers
   S.company = co.data;
   S.settings = { company_name:co.data?.name ?? "", logo_url:co.data?.logo_url };
   S.deps = deps; S.people = people; S.rooms = rooms;
@@ -440,12 +707,12 @@ async function ai(body) {
 function alertText(a) {
   const d = a.days;
   switch (a.kind) {
-    case "expiry":  return d < 0 ? `${a.label}: منتهي منذ ${-d} يوم` : `${a.label}: بعد ${d} يوم`;
-    case "hearing": return `جلسة قضية "${a.label}" بعد ${d} يوم`;
-    case "overdue": return `فاتورة ${a.label} متأخرة ${-d} يوم (${fmtSAR(a.amount)})`;
-    case "late":    return `مشروع "${a.label}" متأخر أو تجاوز موعد التسليم`;
-    case "urgent":  return `طلب عاجل: ${a.label}`;
-    case "note":    return `ملاحظة مدير بانتظار الرد: ${a.label}`;
+    case "expiry":  return d < 0 ? L(`${a.label}: منتهي منذ ${-d} يوم`, `${a.label}: expired ${-d} days ago`) : L(`${a.label}: بعد ${d} يوم`, `${a.label}: in ${d} days`);
+    case "hearing": return L(`جلسة قضية "${a.label}" بعد ${d} يوم`, `Hearing for case "${a.label}" in ${d} days`);
+    case "overdue": return L(`فاتورة ${a.label} متأخرة ${-d} يوم (${fmtSAR(a.amount)})`, `Invoice ${a.label} is ${-d} days overdue (${fmtSAR(a.amount)})`);
+    case "late":    return L(`مشروع "${a.label}" متأخر أو تجاوز موعد التسليم`, `Project "${a.label}" is late or past its delivery date`);
+    case "urgent":  return L(`طلب عاجل: ${a.label}`, `Urgent request: ${a.label}`);
+    case "note":    return L(`ملاحظة مدير بانتظار الرد: ${a.label}`, `Manager note awaiting a reply: ${a.label}`);
     default:        return a.label;
   }
 }
@@ -458,8 +725,10 @@ function renderAuth(message) {
   const s = S.settings;
   $("#app").innerHTML = `
   <div class="auth"><div class="auth-card">
+    <div class="auth-tools"><button class="tbtn" title="${THEME === "dark" ? "الوضع الفاتح" : "الوضع الداكن"}" onclick="App.theme()">${ic(THEME === "dark" ? "sun" : "moon")}</button>
+        <button class="tbtn" title="${LANG === "en" ? "العربية" : "English"}" onclick="App.lang()" data-raw>${LANG === "en" ? "ع" : "EN"}</button></div>
     <div class="brand">
-      <div class="logo">${S.signupCo?.logo_url ? `<img src="${esc(S.signupCo.logo_url)}">` : "✨"}</div>
+      <div class="logo">${S.signupCo?.logo_url ? `<img src="${esc(S.signupCo.logo_url)}">` : ic("sparkles", "lg")}</div>
       <div><h1>${esc(S.signupCo?.name || s.company_name)}</h1><small>منصة الإدارة الذكية</small></div>
     </div>
     <div class="tabs">
@@ -484,7 +753,7 @@ function renderAuth(message) {
         <label class="f"><span>رمز الشركة (تاخذه من مدير شركتك)</span>
           <div class="row" style="flex-wrap:nowrap"><input class="in" name="company_code" id="coCode" dir="ltr" style="text-transform:uppercase" value="${esc(S.signupCode || "")}" placeholder="مثال: A1B2C3">
           <button type="button" class="btn" onclick="App.checkCode()">تحقق</button></div></label>
-        ${S.signupCo ? `<div class="msg ok mb">✅ ${esc(S.signupCo.name)}${S.signupCo.is_admin_code ? " · ستسجل كمدير الشركة" : ""}</div>` : ""}
+        ${S.signupCo ? `<div class="msg ok mb">${ic("check")} ${esc(S.signupCo.name)}${S.signupCo.is_admin_code ? " · ستسجل كمدير الشركة" : ""}</div>` : ""}
         <label class="f"><span>الاسم الكامل</span><input class="in" name="full_name" required></label>
         <label class="f"><span>المسمى الوظيفي</span><input class="in" name="job_title"></label>
         ${S.signupCo && !S.signupCo.is_admin_code ? `<p class="muted small mb">مدير الشركة هو اللي يحدد قسمك ويوافق على حسابك.</p>` : ""}
@@ -496,15 +765,15 @@ function renderAuth(message) {
       </form>`}
     ${message ? `<div class="msg ${message.t}">${esc(message.m)}</div>` : ""}
     ${S.netErr ? `<div class="msg err">تعذّر الاتصال بخادم المنصة. افتح المنصة من رابطها على الإنترنت (مثل manage.yaqenai.com) وليس من معاينة الملف.
-      <button class="btn sm mt" onclick="App.retry()">↻ إعادة المحاولة</button></div>` : ""}
+      <button class="btn sm mt" onclick="App.retry()">${ic("refresh")} إعادة المحاولة</button></div>` : ""}
     <div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div>
   </div></div>`;
 }
 
 // ===== Shell =====
 function navItems() {
-  const top = isSuper() ? [{ sec:"مسؤول المنصة" }, { v:"platform", i:"🌐", l:"لوحة يقين (كل الشركات)" }] : [];
-  if (!S.cid) return [...top, { v:"profile", i:"👤", l:"ملفي الشخصي" }];
+  const top = isSuper() ? [{ sec:"مسؤول المنصة" }, { v:"platform", i:"globe", l:"لوحة يقين (كل الشركات)" }] : [];
+  if (!S.cid) return [...top, { v:"profile", i:"user", l:"ملفي الشخصي" }];
   const alerts = computeAlerts();
   const cnt = (v) => alerts.filter((a) => a.view === v).length;
   const openNotes = S.stats?.notes_open ?? 0;
@@ -512,19 +781,19 @@ function navItems() {
   return [
     ...top,
     { sec:isSuper() ? "الشركة: " + (S.company?.name || "") : "عام" },
-    { v:"home", i:"🏠", l:"لوحة القيادة" },
-    { v:"ai", i:"✨", l:"مساعد يقين الذكي" },
-    { v:"rooms", i:"🗣️", l:"غرف العمليات", c:(S.rooms ?? []).filter((r) => r.status === "مفتوحة").length || 0 },
-    { v:"notes", i:"📌", l:"ملاحظات المدير", c:openNotes },
+    { v:"home", i:"grid", l:"لوحة القيادة" },
+    { v:"ai", i:"sparkles", l:"مساعد يقين الذكي" },
+    { v:"rooms", i:"chat", l:"غرف العمليات", c:(S.rooms ?? []).filter((r) => r.status === "مفتوحة").length || 0 },
+    { v:"notes", i:"pin", l:"ملاحظات المدير", c:openNotes },
     { sec:"الشركة" },
-    { v:"departments", i:"🏢", l:isAdmin() ? "الأقسام" : "قسمي" },
-    { v:"people", i:"👥", l:"الموظفين", c:isAdmin() ? pending : 0 },
+    { v:"departments", i:"building", l:isAdmin() ? "الأقسام" : "قسمي" },
+    { v:"people", i:"users", l:"الموظفين", c:isAdmin() ? pending : 0 },
     { sec:"العمليات" },
     ...Object.entries(ENT).map(([k, c]) => ({ v:k, i:c.icon, l:c.title, c:cnt(k) })),
-    ...(isAdmin() ? [{ sec:"الحوكمة" }, { v:"audit", i:"🧾", l:"سجل التدقيق" }, { v:"trash", i:"🗑️", l:"سلة المحذوفات" }, { v:"whatsapp", i:"💬", l:"رسائل الواتساب" }] : []),
+    ...(isAdmin() ? [{ sec:"الحوكمة" }, { v:"audit", i:"history", l:"سجل التدقيق" }, { v:"trash", i:"trash", l:"سلة المحذوفات" }, { v:"whatsapp", i:"inboxmsg", l:"رسائل الواتساب" }] : []),
     { sec:"الحساب" },
-    { v:"profile", i:"👤", l:"ملفي الشخصي" },
-    ...(isAdmin() ? [{ v:"settings", i:"⚙️", l:"إعدادات الشركة" }] : []),
+    { v:"profile", i:"user", l:"ملفي الشخصي" },
+    ...(isAdmin() ? [{ v:"settings", i:"gear", l:"إعدادات الشركة" }] : []),
   ];
 }
 function titleOf(v) {
@@ -537,31 +806,33 @@ function renderShell() {
     <div class="overlay" id="ov" onclick="App.menu(false)"></div>
     <aside class="side" id="side">
       <div class="brand">
-        <div class="logo">${S.cid && s.logo_url ? `<img src="${esc(s.logo_url)}">` : S.cid ? "🏢" : "✨"}</div>
+        <div class="logo">${S.cid && s.logo_url ? `<img src="${esc(s.logo_url)}">` : ic(S.cid ? "building" : "sparkles", "lg")}</div>
         <div><h1 style="font-size:16px">${esc(S.cid ? s.company_name : "يقين للأعمال")}</h1><small>${isSuper() ? "مسؤول المنصة" : isAdmin() ? "مدير الشركة" : esc(depName(me?.department_id))}</small></div>
       </div>
       <nav class="nav">${navItems().map((n) => n.sec ? `<div class="sec">${n.sec}</div>` :
-        `<button class="${S.view === n.v ? "on" : ""}" onclick="App.go('${n.v}')"><span class="ico">${n.i}</span>${n.l}${n.c ? `<span class="cnt">${n.c}</span>` : ""}</button>`).join("")}
+        `<button class="${S.view === n.v ? "on" : ""}" onclick="App.go('${n.v}')"><span class="ico">${ic(n.i)}</span>${n.l}${n.c ? `<span class="cnt">${n.c}</span>` : ""}</button>`).join("")}
         <div class="sec"></div>
-        <button onclick="App.logout()"><span class="ico">🚪</span>تسجيل الخروج</button>
+        <button onclick="App.logout()"><span class="ico">${ic("logout")}</span>تسجيل الخروج</button>
       </nav>
       <div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div>
     </aside>
     <main class="main">
       <div class="top">
-        <button class="menu-btn" onclick="App.menu(true)">☰</button>
+        <button class="menu-btn" onclick="App.menu(true)">${ic("menu")}</button>
         <h2>${esc(titleOf(S.view))}</h2>
-        ${S.cid ? `<button class="btn sm ghost" title="التنبيهات" onclick="Gov.bell()" style="position:relative">🔔${(S.notifs ?? []).filter((n) => !n.read_at).length ? `<span class="badge b-red" style="position:absolute;top:-6px;left:-6px;padding:1px 6px">${(S.notifs ?? []).filter((n) => !n.read_at).length}</span>` : ""}</button>` : ""}
+        ${S.cid ? `<button class="btn sm ghost" title="التنبيهات" onclick="Gov.bell()" style="position:relative">${ic("bell")}${(S.notifs ?? []).filter((n) => !n.read_at).length ? `<span class="badge b-red" style="position:absolute;top:-6px;inset-inline-end:-6px;padding:1px 6px">${(S.notifs ?? []).filter((n) => !n.read_at).length}</span>` : ""}</button>` : ""}
+        <button class="tbtn" title="${THEME === "dark" ? "الوضع الفاتح" : "الوضع الداكن"}" onclick="App.theme()">${ic(THEME === "dark" ? "sun" : "moon")}</button>
+        <button class="tbtn" title="${LANG === "en" ? "العربية" : "English"}" onclick="App.lang()" data-raw>${LANG === "en" ? "ع" : "EN"}</button>
         <div class="me" onclick="App.go('${isSuper() ? "platform" : "profile"}')">
           <span class="nm small">${esc(me?.full_name)}</span>${avatar(me)}
         </div>
       </div>
-      ${S.mfaNeeded ? `<div class="msg err" style="margin:10px 22px">🛡️ شركتك تلزم المدراء بالتحقق الثنائي. صلاحيات المدير موقوفة لين تفعّله من <a href="#" onclick="App.go('profile');return false">ملفك الشخصي</a> ثم تسجل دخول من جديد.</div>` : ""}
-      ${isSuper() && S.cid && S.view !== "platform" ? `<div style="background:var(--blueSoft);color:#93C5FD;padding:8px 22px;font-size:13px" class="row">🌐 تشاهد شركة <b>${esc(S.company?.name)}</b> بصلاحية مسؤول المنصة<span class="sp"></span><button class="btn sm ghost" onclick="App.go('platform')">رجوع لكل الشركات</button></div>` : ""}
+      ${S.mfaNeeded ? `<div class="msg err" style="margin:10px 22px">${ic("shield")} شركتك تلزم المدراء بالتحقق الثنائي. صلاحيات المدير موقوفة لين تفعّله من <a href="#" onclick="App.go('profile');return false">ملفك الشخصي</a> ثم تسجل دخول من جديد.</div>` : ""}
+      ${isSuper() && S.cid && S.view !== "platform" ? `<div style="background:var(--blueSoft);color:var(--blueTxt);padding:8px 22px;font-size:13px" class="row">${ic("globe")} تشاهد شركة <b>${esc(S.company?.name)}</b> بصلاحية مسؤول المنصة<span class="sp"></span><button class="btn sm ghost" onclick="App.go('platform')">رجوع لكل الشركات</button></div>` : ""}
       <div class="content" id="content"></div>
     </main>
   </div>
-  ${S.view !== "ai" && S.cid && S.view !== "platform" && S.view !== "room" ? `<button class="fab" title="اسأل مساعد يقين" onclick="App.go('ai')">✨</button>` : ""}`;
+  ${S.view !== "ai" && S.cid && S.view !== "platform" && S.view !== "room" ? `<button class="fab" title="اسأل مساعد يقين" onclick="App.go('ai')">${ic("sparkles", "lg")}</button>` : ""}`;
   renderView();
 }
 function avatar(p, cls = "") {
@@ -592,7 +863,7 @@ function renderView() {
 // ===== Photo cropper =====
 function openCropper(file, onDone) {
   const url = URL.createObjectURL(file);
-  modal(`<div class="row"><h3 class="sp">✂️ قص الصورة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+  modal(`<div class="row"><h3 class="sp">${ic("crop")} قص الصورة</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
     <div class="crop-wrap" id="cropWrap"><canvas id="cropCv" width="600" height="600"></canvas><div class="crop-ring"></div></div>
     <label class="f mt"><span>تكبير وتصغير</span><input type="range" id="cropZoom" dir="ltr" min="1" max="4" step="0.01" value="1"></label>
     <p class="muted small">اسحب الصورة بإصبعك عشان تحركها داخل الدائرة</p>
@@ -630,8 +901,8 @@ async function uploadBlob(blob, folder) {
 }
 
 // ===== Operation rooms =====
-const fmtTime = (d) => new Date(d).toLocaleString("ar-SA-u-ca-gregory", { hour:"numeric", minute:"2-digit", day:"numeric", month:"short" });
-const fmtSize = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + " م.ب" : Math.max(1, Math.round(n / 1024)) + " ك.ب");
+const fmtTime = (d) => new Date(d).toLocaleString(DLOC(), { hour:"numeric", minute:"2-digit", day:"numeric", month:"short" });
+const fmtSize = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + L(" م.ب", " MB") : Math.max(1, Math.round(n / 1024)) + L(" ك.ب", " KB"));
 const personById = (id) => S.people.find((p) => p.id === id) || (S.me?.id === id ? S.me : null);
 const roomMembers = (rid) => (S.roomMembers ?? []).filter((m) => m.room_id === rid).map((m) => personById(m.user_id)).filter(Boolean);
 const canAdminRoom = (r) => isAdmin() || r?.created_by === S.me?.id;
@@ -643,11 +914,11 @@ function viewRooms() {
     <button class="btn pri" onclick="App.roomForm()">+ غرفة عمليات جديدة</button></div>
   ${rooms.length ? `<div class="grid g3">${rooms.map((r) => { const mem = roomMembers(r.id); return `
     <div class="rec" onclick="App.go('room','${safeId(r.id)}')">
-      <div class="row"><div class="t sp">🗣️ ${esc(r.title)}</div><span class="badge ${r.status === "مفتوحة" ? "b-green" : ""}">${esc(r.status)}</span></div>
+      <div class="row"><div class="t sp">${esc(r.title)}</div><span class="badge ${r.status === "مفتوحة" ? "b-green" : ""}">${esc(r.status)}</span></div>
       ${r.description ? `<div class="muted small" style="margin-top:4px">${esc(r.description.slice(0, 110))}</div>` : ""}
       <div class="row mt"><div class="avs">${mem.slice(0, 6).map((p) => avatar(p)).join("")}</div><span class="muted small">${mem.length} عضو</span><span class="sp"></span><span class="muted small">${fmtTime(r.last_message_at)}</span></div>
     </div>`; }).join("")}</div>` :
-  `<div class="card empty"><div style="font-size:40px">🗣️</div>ما فيه غرف عمليات للحين.<br>سوّ غرفة لموضوع معين، مثل "تعطل معدة في موقع أبقيق"، وأضف الموظفين المعنيين.
+  `<div class="card empty">${ic("chat", "xl")}<br>ما فيه غرف عمليات للحين.<br>سوّ غرفة لموضوع معين، مثل "تعطل معدة في موقع أبقيق"، وأضف الموظفين المعنيين.
     <br><button class="btn pri mt" onclick="App.roomForm()">+ غرفة عمليات جديدة</button></div>`}`;
 }
 
@@ -657,44 +928,44 @@ function viewRoom(id) {
   const mem = roomMembers(id), open = r.status === "مفتوحة";
   return `<div class="chat">
     <div class="room-head">
-      <button class="btn sm ghost" onclick="App.go('rooms')">→</button>
-      <div class="sp" style="min-width:140px"><b>🗣️ ${esc(r.title)}</b>${r.description ? `<div class="muted small">${esc(r.description)}</div>` : ""}</div>
+      <button class="btn sm ghost" onclick="App.go('rooms')">${ic("prev", "dir")}</button>
+      <div class="sp" style="min-width:140px"><b>${esc(r.title)}</b>${r.description ? `<div class="muted small">${esc(r.description)}</div>` : ""}</div>
       <div class="avs" style="cursor:pointer" onclick="App.roomForm('${safeId(id)}')">${mem.slice(0, 5).map((p) => avatar(p)).join("")}</div>
-      <button class="btn sm ai" id="sumBtn" onclick="App.roomSummary('${safeId(id)}')">✨ لخّص النقاش</button>
-      ${canAdminRoom(r) ? `<button class="btn sm ghost" onclick="App.roomForm('${safeId(id)}')">⚙️</button>` : ""}
+      <button class="btn sm ai" id="sumBtn" onclick="App.roomSummary('${safeId(id)}')">${ic("sparkles")} لخّص النقاش</button>
+      ${canAdminRoom(r) ? `<button class="btn sm ghost" onclick="App.roomForm('${safeId(id)}')">${ic("gear")}</button>` : ""}
     </div>
     <div class="msgs" id="msgs"><div class="empty"><span class="spin"></span></div></div>
     ${open ? `<div class="composer" id="composer">
-      <label class="iconbtn" title="إرفاق صورة أو مستند">📎<input type="file" class="hidden" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.dwg" onchange="Room.files(this)"></label>
-      <button class="iconbtn" id="micBtn" title="رسالة صوتية" onclick="Room.record()">🎤</button>
+      <label class="iconbtn" title="إرفاق صورة أو مستند">${ic("clip")}<input type="file" class="hidden" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.dwg" onchange="Room.files(this)"></label>
+      <button class="iconbtn" id="micBtn" title="رسالة صوتية" onclick="Room.record()">${ic("mic")}</button>
       <form class="row sp" style="flex-wrap:nowrap" onsubmit="Room.send(event)">
         <input class="in" id="rmInput" placeholder="اكتب رسالة..." autocomplete="off">
         <button class="btn pri">إرسال</button>
       </form>
-    </div>` : `<div class="msg mt" style="text-align:center">🔒 هذه الغرفة مغلقة${canAdminRoom(r) ? ` · <a href="#" onclick="App.roomStatus('${safeId(id)}','مفتوحة');return false">إعادة فتحها</a>` : ""}</div>`}
+    </div>` : `<div class="msg mt" style="text-align:center">${ic("lock")} هذه الغرفة مغلقة${canAdminRoom(r) ? ` · <a href="#" onclick="App.roomStatus('${safeId(id)}','مفتوحة');return false">إعادة فتحها</a>` : ""}</div>`}
   </div>`;
 }
 
 const needsTr = (t) => /[\u0679\u0688\u0691\u06BA\u06BE\u06C1\u06D2\u06D3]/.test(t) || /[A-Za-z]{3,}/.test(t);
-const LANGS = [["ar", "🇸🇦 عربي"], ["ur", "🇵🇰 اردو"], ["en", "🇬🇧 English"]];
+const LANGS = [["ar", "عربي"], ["ur", "اردو"], ["en", "English"]];
 function trHtml(m) {
   const t = m.translation;
   if (t && (t.ar || t.en)) {
     const rows = LANGS.filter(([k]) => t[k] && t[k].trim() !== (m.body || "").trim());
-    return `<div class="tr">${t.lang && t.lang !== "ar" ? `<div class="lg">🌐 مترجم من ${esc(t.lang_name_ar || t.lang)}</div>` : ""}${rows.map(([k, l]) => `<div><div class="lg">${l}</div><div dir="${k === "en" ? "ltr" : "rtl"}">${esc(t[k])}</div></div>`).join("")}</div>`;
+    return `<div class="tr">${t.lang && t.lang !== "ar" ? `<div class="lg">${ic("globe")} مترجم من ${esc(t.lang_name_ar || t.lang)}</div>` : ""}${rows.map(([k, l]) => `<div><div class="lg">${l}</div><div dir="${k === "en" ? "ltr" : "rtl"}">${esc(t[k])}</div></div>`).join("")}</div>`;
   }
   if (S.trPending?.[m.id]) return `<div class="tr"><span class="spin"></span> <span class="lg">جاري الترجمة...</span></div>`;
-  return `<div><button class="trbtn" onclick="Room.translate('${safeId(m.id)}')">🌐 ترجمة</button></div>`;
+  return `<div><button class="trbtn" onclick="Room.translate('${safeId(m.id)}')">${ic("globe")} ترجمة</button></div>`;
 }
 function msgHtml(m) {
   const mine = m.user_id === S.me?.id, p = personById(m.user_id);
   const url = m.file_path ? S.urls[m.file_path] : null;
   let inner;
   if (m.kind === "text") inner = esc(m.body) + trHtml(m);
-  else if (m.kind === "ai") inner = `<div class="muted small mb">✨ ملخص يقين الذكي</div>${md(m.body || "")}`;
+  else if (m.kind === "ai") inner = `<div class="muted small mb">${ic("sparkles")} ملخص يقين الذكي</div>${md(m.body || "")}`;
   else if (m.kind === "image") inner = url ? `<img class="pic" src="${esc(url)}" data-url="${esc(url)}" onclick="Room.zoom(this.dataset.url)">` : `<span class="spin"></span> صورة`;
   else if (m.kind === "audio") inner = url ? `<audio controls preload="metadata" src="${esc(url)}"></audio>` : `<span class="spin"></span> رسالة صوتية`;
-  else inner = `<a class="fileln" href="${esc(url || "#")}" target="_blank" rel="noopener"><span class="ic">📄</span><span><b>${esc(m.file_name)}</b><div class="muted small">${m.file_size ? fmtSize(m.file_size) : ""} · اضغط للفتح</div></span></a>`;
+  else inner = `<a class="fileln" href="${esc(url || "#")}" target="_blank" rel="noopener"><span class="ic">${ic("file")}</span><span><b>${esc(m.file_name)}</b><div class="muted small">${m.file_size ? fmtSize(m.file_size) : ""} · اضغط للفتح</div></span></a>`;
   if (m.kind === "ai") return `<div class="m ai"><div><div class="b">${inner}</div><div class="tm">${fmtTime(m.created_at)} · نشره ${esc(p?.full_name || "")}</div></div></div>`;
   return `<div class="m ${mine ? "me" : "other"}">${mine ? "" : avatar(p)}<div><div class="b">${mine ? "" : `<div class="who">${esc(p?.full_name || "مستخدم")}</div>`}${inner}</div><div class="tm">${fmtTime(m.created_at)}</div></div></div>`;
 }
@@ -724,7 +995,7 @@ const Room = {
     const box = $("#msgs"); if (!box || !this.id) return;
     const list = S.roomMsgs[this.id] || [];
     const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-    box.innerHTML = list.length ? list.map(msgHtml).join("") : `<div class="empty">ابدأ النقاش 👋<br><span class="small">تقدر ترسل نص، صور، مستندات، أو رسالة صوتية 🎤</span></div>`;
+    box.innerHTML = list.length ? list.map(msgHtml).join("") : `<div class="empty">ابدأ النقاش<br><span class="small">تقدر ترسل نص، صور، مستندات، أو رسالة صوتية</span></div>`;
     if (atBottom || !box.dataset.init) { box.scrollTop = box.scrollHeight; box.dataset.init = "1"; }
     const need = list.filter((m) => m.file_path && !S.urls[m.file_path]).map((m) => m.file_path);
     if (need.length) {
@@ -796,8 +1067,8 @@ const Room = {
       if (!bar) { bar = document.createElement("div"); bar.id = "recBar"; bar.className = "rec-bar";
         bar.innerHTML = `<span class="rec-dot"></span><span>جاري التسجيل <b id="recT">0:00</b></span><span class="sp"></span><button class="btn sm ghost" onclick="Room.stopRec(true)">إلغاء</button>`;
         c.appendChild(bar); }
-      mic.textContent = "📤"; mic.title = "إرسال التسجيل";
-    } else { form?.classList.remove("hidden"); bar?.remove(); if (mic) { mic.textContent = "🎤"; mic.title = "رسالة صوتية"; } }
+      mic.innerHTML = ic("send"); mic.title = "إرسال التسجيل";
+    } else { form?.classList.remove("hidden"); bar?.remove(); if (mic) { mic.innerHTML = ic("mic"); mic.title = "رسالة صوتية"; } }
   },
   async translate(mid) {
     const list = S.roomMsgs[this.id] || []; const m = list.find((x) => x.id === mid); if (!m) return;
@@ -820,11 +1091,11 @@ function viewPlatform() {
   const active = cos.filter((c) => c.active && !c.deleted_at).length;
   return `
   <div class="ai-hero mb"><div class="row">
-    <div style="font-size:34px">🌐</div>
+    <div class="chipi">${ic("globe", "lg")}</div>
     <div class="sp"><b style="font-size:17px">لوحة يقين</b><div class="muted small">كل الشركات المشتركة في المنصة. كل شركة معزولة ببياناتها وموظفيها، وأنت تقدر تدخل أي شركة.</div></div>
     <button class="btn pri" onclick="App.companyForm()">+ شركة جديدة</button>
   </div>
-  <div class="row mt"><button class="btn sm ghost" onclick="Gov.events()">🩺 أحداث النظام</button><button class="btn sm ghost" onclick="Gov.inviteForm()">👤 دعوة مسؤول منصة</button></div></div>
+  <div class="row mt"><button class="btn sm ghost" onclick="Gov.events()">${ic("pulse")} أحداث النظام</button><button class="btn sm ghost" onclick="Gov.inviteForm()">${ic("userplus")} دعوة مسؤول منصة</button></div></div>
   <div class="grid g4 mb">
     <div class="card"><div class="kpi"><div class="v">${cos.length}</div><div class="l">الشركات</div></div></div>
     <div class="card"><div class="kpi"><div class="v">${active}</div><div class="l">شركات فعّالة</div></div></div>
@@ -832,7 +1103,7 @@ function viewPlatform() {
   </div>
   ${cos.length ? `<div class="grid g3">${cos.map((c) => { const u = users(c.id); const adm = u.filter((p) => p.role === "admin").length; return `
     <div class="card">
-      <div class="row"><div class="logo">${c.logo_url ? `<img src="${esc(c.logo_url)}">` : "🏢"}</div>
+      <div class="row"><div class="logo">${c.logo_url ? `<img src="${esc(c.logo_url)}">` : ic("building", "lg")}</div>
         <div class="sp"><b>${esc(c.name)}</b><div class="muted small">${u.length} مستخدم · ${adm} مدير</div></div>
         <span class="badge ${c.deleted_at ? "b-red" : c.active ? "b-green" : "b-red"}">${c.deleted_at ? "محذوفة (قابلة للاسترجاع)" : c.active ? "فعّالة" : "موقوفة"}</span></div>
       <div class="mt small">
@@ -844,58 +1115,89 @@ function viewPlatform() {
         <button class="btn sm ghost" onclick="App.companyForm('${safeId(c.id)}')">إدارة</button>
       </div>
     </div>`; }).join("")}</div>` :
-  `<div class="card empty"><div style="font-size:40px">🏢</div>ما فيه شركات للحين.<br>أضف أول شركة، وبيطلع لك رمزين: رمز تعطيه لمدير الشركة عشان يسجل كمدير، ورمز يوزعه المدير على موظفينه.
+  `<div class="card empty">${ic("building", "xl")}<br>ما فيه شركات للحين.<br>أضف أول شركة، وبيطلع لك رمزين: رمز تعطيه لمدير الشركة عشان يسجل كمدير، ورمز يوزعه المدير على موظفينه.
     <br><button class="btn pri mt" onclick="App.companyForm()">+ شركة جديدة</button></div>`}`;
 }
 
 // ===== Home =====
 function viewHome() {
-  const st = S.stats ?? {}, alerts = computeAlerts();
+  const st = S.stats ?? {}, alerts = computeAlerts(), ch = S.charts;
   const vTotal = st.vehicles_total ?? 0, active = st.vehicles_active ?? 0;
   const overdueN = st.invoices_overdue ?? 0, receivable = st.receivables ?? 0, openCases = st.cases_open ?? 0;
   const runN = st.projects_running ?? 0, avgProg = st.projects_avg_progress ?? 0;
   const runPrj = S.homeProjects ?? [];
   const hi = alerts.filter((a) => a.lvl === "h").length;
-  const kpi = (v, l, s, view, cls = "") => `<div class="card kpi" onclick="App.go('${view}')"><div class="v">${v}</div><div class="l">${l}</div>${s ? `<div class="s ${cls}">${s}</div>` : ""}</div>`;
+  const mon = ch?.monthly ?? [], cur = mon[mon.length - 1], prev = mon[mon.length - 2];
+  const delta = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
+  const dTxt = (d) => (d == null ? "" : `<span class="${d >= 0 ? "up" : "down"}">${d > 0 ? "▲" : d < 0 ? "▼" : ""} ${Math.abs(d).toLocaleString(LOC())}%</span> <span class="muted">${L("عن الشهر السابق", "vs last month")}</span>`);
+  const kpi = (icon, tone, v, l, s, view) => `<div class="card kpi kt" onclick="App.go('${view}')"><div class="top2"><div class="chipi ${tone}">${ic(icon)}</div><div class="l">${l}</div></div>
+    <div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ""}</div>`;
   const greet = new Date().getHours() < 12 ? "صباح الخير" : "مساء الخير";
+  const issuedPct = cur && prev ? delta(Number(cur.issued), Number(prev.issued)) : null;
+  const collPct = cur && Number(cur.issued) ? Math.round((Number(cur.collected) / Number(cur.issued)) * 100) : null;
+  const series = mon.slice(window.innerWidth < 640 ? -6 : 0).map((m) => ({ label:monthShort(m.month), values:m }));   // phones: last 6 months
+  const fleetParts = ch ? Object.entries(ch.fleet).map(([k, v]) => ({ label:k, value:v, color:STATUS_COLOR[k] || "var(--c4)" }))
+    : [{ label:"شغالة", value:active, color:"var(--green)" }, { label:"متوقفة أو صيانة", value:vTotal - active, color:"var(--amber)" }];
+  const prjParts = ch ? Object.entries(ch.projects).map(([k, v]) => ({ label:k, value:v, color:STATUS_COLOR[k] || "var(--c4)" })) : [];
+  const ag = ch?.aging;
+  const agingRows = ag ? [["لم يحن موعدها", ag.not_due, "var(--green)"], [L("1-30 يوم", "1-30 days"), ag.d1_30, "var(--amber)"], [L("31-60 يوم", "31-60 days"), ag.d31_60, "var(--accent)"],
+    [L("61-90 يوم", "61-90 days"), ag.d61_90, "var(--red)"], [L("أكثر من 90 يوم", "Over 90 days"), ag.d90_plus, "var(--red)"]] : [];
+  const agMax = Math.max(1, ...agingRows.map((r) => Number(r[1]) || 0));
   return `
-  <div class="row mb"><div><div style="font-size:20px;font-weight:700">${greet}، ${esc((S.me?.full_name || "").split(" ")[0])} 👋</div>
-    <div class="muted small">${new Date().toLocaleDateString("ar-SA-u-ca-gregory", { weekday:"long", day:"numeric", month:"long", year:"numeric" })}</div></div></div>
+  <div class="row mb"><div class="sp"><div style="font-size:20px;font-weight:700">${greet}، ${esc((S.me?.full_name || "").split(" ")[0])}</div>
+    <div class="muted small">${new Date().toLocaleDateString(DLOC(), { weekday:"long", day:"numeric", month:"long", year:"numeric" })}</div></div>
+    <button class="btn sm ghost" onclick="App.refresh()">${ic("refresh")} تحديث</button></div>
 
-  ${briefCard()}
+  <div class="kgrid">
+    ${kpi("wallet", "", fmtSAR(receivable), "مستحقات لم تُحصّل", overdueN ? `<span class="down">${fmtNum(overdueN)} ${L("فواتير متأخرة", "overdue invoices")}</span>` : `<span class="muted">${L("لا توجد فواتير متأخرة", "No overdue invoices")}</span>`, "invoices")}
+    ${kpi("arrowout", "acc", cur ? fmtSAR(cur.issued) : "-", "فواتير صادرة هذا الشهر", dTxt(issuedPct), "invoices")}
+    ${kpi("check", "blue", cur ? fmtSAR(cur.collected) : "-", "المحصّل هذا الشهر", collPct == null ? "" : `<span class="muted">${L(`${collPct.toLocaleString(LOC())}% من الصادرة`, `${collPct}% of issued`)}</span>`, "invoices")}
+    ${kpi("alert", hi ? "red" : "", fmtNum(hi), "تنبيهات عاجلة", `<span class="muted">${L(`${fmtNum(alerts.length)} تنبيه إجمالاً`, `${fmtNum(alerts.length)} alerts in total`)}</span>`, "home")}
+    ${kpi("hardhat", "blue", fmtNum(runN), "مشاريع جارية", `<span class="muted">${L(`متوسط الإنجاز ${avgProg}%`, `Average progress ${avgProg}%`)}</span>`, "projects")}
+    ${kpi("truck", vTotal - active ? "amber" : "", `${fmtNum(active)}<span class="muted" style="font-size:15px"> / ${fmtNum(vTotal)}</span>`, "معدات شغالة", vTotal - active ? `<span class="down">${L(`${fmtNum(vTotal - active)} متوقفة أو صيانة`, `${fmtNum(vTotal - active)} stopped or in maintenance`)}</span>` : `<span class="muted">${L("كلها شغالة", "All running")}</span>`, "vehicles")}
+    ${kpi("users", "", fmtNum(st.employees ?? 0), "الموظفين", `<span class="muted">${L(`${S.deps.length} أقسام`, `${S.deps.length} departments`)}</span>${st.pending_members ? ` · <span class="down">${L(`${st.pending_members} بانتظار الموافقة`, `${st.pending_members} awaiting approval`)}</span>` : ""}`, "people")}
+    ${kpi("scale", "", fmtNum(openCases), "قضايا مفتوحة", "", "legal_cases")}
+  </div>
 
-  <div class="grid g4 mt">
-    ${kpi(fmtNum(st.employees ?? 0), "الموظفين", `${S.deps.length} أقسام${st.pending_members ? ` · ${st.pending_members} بانتظار الموافقة` : ""}`, "people", st.pending_members ? "b-amber" : "")}
-    ${kpi(`${fmtNum(active)}<span class="muted" style="font-size:16px"> / ${fmtNum(vTotal)}</span>`, "مركبات ومعدات شغالة", vTotal - active ? `${fmtNum(vTotal - active)} متوقفة أو صيانة` : "كلها شغالة", "vehicles", vTotal - active ? "b-amber" : "")}
-    ${kpi(fmtNum(runN), "مشاريع جارية", `متوسط الإنجاز ${avgProg}%`, "projects")}
-    ${kpi(fmtNum(openCases), "قضايا مفتوحة", "", "legal_cases")}
-    ${kpi(fmtSAR(receivable), "مستحقات لم تُحصّل", overdueN ? `${fmtNum(overdueN)} فواتير متأخرة` : "", "invoices", "b-red")}
-    ${kpi(hi, "تنبيهات عاجلة", alerts.length + (alerts.length >= 300 ? "+" : "") + " تنبيه إجمالاً", "home", hi ? "b-red" : "")}
+  <div class="mt">${briefCard()}</div>
+
+  <div class="grid g21 mt">
+    <div class="card"><h3>${ic("chart")} الفوترة الشهرية<span class="sub">${window.innerWidth < 640 ? L("آخر 6 أشهر", "Last 6 months") : L("آخر 12 شهر", "Last 12 months")} · ${L("حسب تاريخ الاستحقاق", "by due date")}</span></h3>
+      ${ch ? chartBars(series, [{ k:"issued", color:"var(--green)", label:"صادرة (للعملاء)" }, { k:"incoming", color:"var(--accent)", label:"واردة (من الموردين)" }],
+        { highlight:series.length - 1, avgKey:"issued", avgLabel:"متوسط الصادرة", title:"الفوترة الشهرية" }) : `<div class="empty small">الرسم غير متاح حالياً</div>`}</div>
+    <div class="card"><h3>${ic("truck")} حالة المعدات</h3>
+      ${vTotal ? chartDonut(fleetParts, fmtNum(vTotal), L("معدة", "units")) : `<div class="empty small">لا توجد معدات مسجلة</div>`}</div>
+  </div>
+
+  <div class="grid g3f mt">
+    <div class="card"><h3>${ic("wallet")} تقادم المستحقات<span class="sub">${L("أيام التأخير", "days overdue")}</span></h3>
+      ${ag && agingRows.some((r) => Number(r[1])) ? chartHBars(agingRows.map(([l, v, c]) => ({ label:l, value:Number(v) || 0, max:agMax, color:c, text:fmtShort(v), go:"App.go('invoices')" })))
+        : `<div class="empty small">لا توجد مستحقات غير محصّلة</div>`}
+      ${ch?.receivables_by_dept?.length > 1 ? `<div class="note">${L("حسب القسم", "By department")}</div><div class="mt">${chartHBars(ch.receivables_by_dept.map((d) => ({ label:d.department, value:Number(d.amount), color:"var(--navy)", text:fmtShort(d.amount) })))}</div>` : ""}</div>
+    <div class="card"><h3>${ic("hardhat")} تقدّم المشاريع</h3>
+      ${runPrj.length ? chartHBars(runPrj.slice(0, 6).map((p) => ({ label:p.name, value:p.progress || 0, max:100, color:p.status === "متأخر" || (p.end_date && daysLeft(p.end_date) < 0) ? "var(--red)" : "var(--green)", text:(p.progress || 0) + "%", go:`App.edit('projects','${safeId(p.id)}')` })), true)
+        : `<div class="empty small">أضف أول مشروع<br><button class="btn sm mt" onclick="App.edit('projects')">${ic("plus")} مشروع</button></div>`}</div>
+    <div class="card"><h3>${ic("pie")} المشاريع حسب الحالة</h3>
+      ${prjParts.length ? chartDonut(prjParts, fmtNum(prjParts.reduce((s2, p) => s2 + p.value, 0)), L("مشروع", "projects")) : `<div class="empty small">لا توجد مشاريع</div>`}
+      ${ch ? `<div class="note">${L("انتهاءات الوثائق والتأمين والرخص: منتهية، وخلال", "Expiries of documents, insurance and licences: expired, and within")}</div>
+        <div class="stat3 mt"><div><b class="down">${fmtNum(ch.expiry.expired)}</b><span class="small muted">منتهية</span></div><div><b style="color:var(--amberTxt)">${fmtNum(ch.expiry.d30)}</b><span class="small muted">${L("30 يوم", "30 days")}</span></div><div><b>${fmtNum(ch.expiry.d90)}</b><span class="small muted">${L("90 يوم", "90 days")}</span></div></div>` : ""}</div>
   </div>
 
   <div class="grid g2 mt">
-    <div class="card"><h3>🔔 يحتاج انتباهك</h3>
-      <div class="list">${alerts.length ? alerts.slice(0, 10).map((a) => `
+    <div class="card"><h3>${ic("bell")} يحتاج انتباهك<span class="sub">${fmtNum(alerts.length)}</span></h3>
+      <div class="list">${alerts.length ? alerts.slice(0, 8).map((a) => `
         <div class="it" style="cursor:pointer" onclick="App.go('${a.view}')"><span class="dot" style="background:${a.lvl === "h" ? "var(--red)" : a.lvl === "m" ? "var(--amber)" : "var(--blue)"}"></span>
-        <div><div>${esc(a.text)}</div><div class="muted small">${esc(depName(a.dep))}</div></div></div>`).join("") : `<div class="empty">لا توجد تنبيهات، كل شيء تحت السيطرة ✅</div>`}
+        <div><div>${esc(a.text)}</div><div class="muted small">${esc(depName(a.dep))}</div></div></div>`).join("") : `<div class="empty">لا توجد تنبيهات، كل شيء تحت السيطرة</div>`}
       </div></div>
-    <div class="card"><h3>🏗️ تقدّم المشاريع</h3>
-      ${runPrj.length ? runPrj.slice(0, 6).map((p) => `
-        <div class="mb" style="cursor:pointer" onclick="App.edit('projects','${safeId(p.id)}')">
-          <div class="row"><b>${esc(p.name)}</b><span class="sp"></span><span class="badge ${ENT.projects.statusColor[p.status] || ""}">${esc(p.status)}</span></div>
-          <div class="bar"><i style="width:${p.progress || 0}%;${p.status === "متأخر" ? "background:var(--red)" : ""}"></i></div>
-          <div class="muted small">${p.progress || 0}% · التسليم ${fmtDate(p.end_date)}</div>
-        </div>`).join("") : `<div class="empty">أضف أول مشروع <br><button class="btn sm mt" onclick="App.edit('projects')">+ مشروع</button></div>`}
-    </div>
-  </div>
-  ${isAdmin() ? `<div class="card mt"><h3>🏢 الأقسام</h3><div class="grid g4">${S.deps.map((dp) => deptMini(dp)).join("")}</div></div>` : ""}`;
+    ${isAdmin() ? `<div class="card"><h3>${ic("building")} الأقسام</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${S.deps.map((dp) => deptMini(dp)).join("")}</div></div>` : ""}
+  </div>`;
 }
 function deptMini(dp) {
   const sum = S.deptSummary?.[dp.id] ?? {};
   const n = sum.people ?? 0, recs = sum.records ?? 0;
   const al = computeAlerts().filter((a) => a.dep === dp.id && a.lvl === "h").length;
-  return `<div class="card kpi" style="background:var(--panel2)" onclick="App.go('dept','${safeId(dp.id)}')">
-    <div style="font-size:24px">${esc(dp.icon)}</div><b>${esc(dp.name)}</b>
+  return `<div class="card kpi" style="background:var(--panel2);box-shadow:none" onclick="App.go('dept','${safeId(dp.id)}')">
+    <div class="chipi">${deptIc(dp.icon, "lg")}</div><b>${esc(dp.name)}</b>
     <div class="muted small">${n} موظف · ${recs} سجل</div>${al ? `<div class="s"><span class="badge b-red">${al} عاجل</span></div>` : ""}</div>`;
 }
 
@@ -903,7 +1205,7 @@ function briefCard() {
   const b = S.brief;
   if (!b) return `
   <div class="ai-hero"><div class="row">
-    <div style="font-size:34px">✨</div>
+    <div class="chipi">${ic("sparkles", "lg")}</div>
     <div class="sp"><b style="font-size:16px">التقرير التنفيذي الذكي</b>
       <div class="muted small">يقرأ يقين كل بيانات الشركة ويطلع لك المخاطر قبل ما تصير، ويقترح عليك قرارات اليوم.</div></div>
     <button class="btn ai" id="briefBtn" onclick="App.brief()">حلّل وضع الشركة الآن</button>
@@ -916,23 +1218,23 @@ function briefCard() {
   return `
   <div class="ai-hero">
     <div class="row" style="align-items:center">
-      <div class="ring"><svg width="96" height="96"><circle cx="48" cy="48" r="42" stroke="#22304F" stroke-width="8" fill="none"/>
-        <circle cx="48" cy="48" r="42" stroke="${col}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - score / 100)}"/></svg><b>${score}</b></div>
+      <div class="ring"><svg width="96" height="96"><circle cx="48" cy="48" r="42" style="stroke:var(--line)" stroke-width="8" fill="none"/>
+        <circle cx="48" cy="48" r="42" style="stroke:${col}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - score / 100)}"/></svg><b>${score}</b></div>
       <div class="sp" style="min-width:200px"><div class="muted small">مؤشر صحة الشركة · تحليل يقين AI</div>
         <div style="font-size:17px;font-weight:700;margin-top:4px">${esc(b.headline)}</div></div>
-      <button class="btn ghost sm" onclick="App.brief()">↻ تحديث</button>
+      <button class="btn ghost sm" onclick="App.brief()">${ic("refresh")} تحديث</button>
     </div>
     ${(b.kpis ?? []).length ? `<div class="grid g4 mt">${b.kpis.slice(0, 4).map((k) => `<div class="card" style="padding:12px"><div class="muted small">${esc(k.label)}</div><b>${esc(k.value)}</b></div>`).join("")}</div>` : ""}
     <div class="grid g2 mt">
-      <div><h3 style="font-size:14px;margin-bottom:8px">⚠️ المخاطر</h3>
+      <div><h3 style="font-size:14px;margin-bottom:8px">${ic("alert")} المخاطر</h3>
         ${(b.risks ?? []).map((r) => `<div class="risk ${lv(r.level)}"><div class="row"><b>${esc(r.title)}</b><span class="sp"></span><span class="badge ${lv(r.level) === "h" ? "b-red" : lv(r.level) === "m" ? "b-amber" : "b-blue"}">${esc(r.level)}</span></div><div class="small muted">${esc(r.detail)}${r.department ? " · " + esc(r.department) : ""}</div></div>`).join("") || `<div class="muted small">لا توجد مخاطر واضحة.</div>`}
       </div>
-      <div><h3 style="font-size:14px;margin-bottom:8px">✅ قرارات مقترحة لليوم</h3>
-        ${(b.actions ?? []).map((a, i) => `<div class="risk" style="border-right-color:var(--green)"><b>${i + 1}. ${esc(a.title)}</b><div class="small muted">${esc(a.why)}</div>
-          ${isAdmin() && a.department && depByName(a.department) ? `<button class="btn sm ghost mt" onclick="App.noteFromAI(${Number(i)})">📌 أرسلها ملاحظة لـ${esc(a.department)}</button>` : ""}</div>`).join("")}
+      <div><h3 style="font-size:14px;margin-bottom:8px">${ic("check")} قرارات مقترحة لليوم</h3>
+        ${(b.actions ?? []).map((a, i) => `<div class="risk g"><b>${i + 1}. ${esc(a.title)}</b><div class="small muted">${esc(a.why)}</div>
+          ${isAdmin() && a.department && depByName(a.department) ? `<button class="btn sm ghost mt" onclick="App.noteFromAI(${Number(i)})">${ic("pin")} أرسلها ملاحظة لـ${esc(a.department)}</button>` : ""}</div>`).join("")}
       </div>
     </div>
-    ${(b.insights ?? []).length ? `<div class="mt"><h3 style="font-size:14px;margin-bottom:6px">💡 ملاحظات ذكية</h3>${b.insights.map((t) => `<div class="small" style="margin-bottom:4px">• ${esc(t)}</div>`).join("")}</div>` : ""}
+    ${(b.insights ?? []).length ? `<div class="mt"><h3 style="font-size:14px;margin-bottom:6px">${ic("bulb")} ملاحظات ذكية</h3>${b.insights.map((t) => `<div class="small" style="margin-bottom:4px">• ${esc(t)}</div>`).join("")}</div>` : ""}
   </div>`;
 }
 
@@ -941,7 +1243,7 @@ const SUGGEST = ["وش أهم ٣ أشياء لازم أتابعها اليوم؟
 function viewAI() {
   return `<div class="chat">
     <div class="msgs" id="msgs">
-      ${!S.chat.length ? `<div class="empty"><div style="font-size:42px">✨</div><b style="font-size:17px;color:var(--text)">مساعد يقين الذكي</b>
+      ${!S.chat.length ? `<div class="empty">${ic("sparkles", "xl")}<br><b style="font-size:17px;color:var(--text)">مساعد يقين الذكي</b>
         <p class="small mt">اسألني أي شي عن الشركة بالعربي، أنا مطلع على الموظفين والأسطول والمشاريع والقضايا والفواتير والوثائق${isAdmin() ? " في كل الأقسام" : " في قسمك"}.</p></div>` : ""}
       ${S.chat.map((m) => `<div class="bub ${m.role === "user" ? "u" : "a"}">${m.role === "user" ? esc(m.content) : md(m.content)}</div>`).join("")}
       ${S.chatBusy ? `<div class="bub a typing"><span></span><span></span><span></span></div>` : ""}
@@ -973,10 +1275,10 @@ function viewNotes() {
         <span class="muted small">${fmtDate(n.created_at)}</span></div>
       ${n.subject ? `<b style="display:block;margin-top:10px">${esc(n.subject)}</b>` : ""}
       <div style="margin-top:6px;white-space:pre-wrap">${esc(n.body)}</div>
-      ${n.reply ? `<div class="risk mt" style="border-right-color:var(--blue)"><div class="muted small">رد القسم ${n.replied_by ? "· " + esc(S.people.find((p) => p.id === n.replied_by)?.full_name || "") : ""}</div>${esc(n.reply)}</div>` : ""}
+      ${n.reply ? `<div class="risk b mt"><div class="muted small">رد القسم ${n.replied_by ? "· " + esc(S.people.find((p) => p.id === n.replied_by)?.full_name || "") : ""}</div>${esc(n.reply)}</div>` : ""}
       <div class="row mt">
-        ${n.status !== "منجزة" ? `<button class="btn sm" onclick="App.replyForm('${safeId(n.id)}')">💬 ${n.reply ? "تعديل الرد" : "رد"}</button>` : ""}
-        ${isAdmin() && n.status !== "منجزة" ? `<button class="btn sm ghost" onclick="App.noteStatus('${safeId(n.id)}','منجزة')">✔ إغلاق كمنجزة</button>` : ""}
+        ${n.status !== "منجزة" ? `<button class="btn sm" onclick="App.replyForm('${safeId(n.id)}')">${ic("chat")} ${n.reply ? "تعديل الرد" : "رد"}</button>` : ""}
+        ${isAdmin() && n.status !== "منجزة" ? `<button class="btn sm ghost" onclick="App.noteStatus('${safeId(n.id)}','منجزة')">${ic("check")} إغلاق كمنجزة</button>` : ""}
         ${isAdmin() ? `<button class="btn sm danger" onclick="App.delNote('${safeId(n.id)}')">حذف</button>` : ""}
       </div>
     </div>`).join("")}</div>` : `<div class="card empty">لا توجد ملاحظات بعد.</div>`}`;
@@ -993,13 +1295,13 @@ function viewDept(id) {
   const notes = (S.notes ?? []).filter((n) => n.department_id === id);
   const alerts = computeAlerts().filter((a) => a.dep === id);
   return `
-  <div class="row mb"><div style="font-size:30px">${esc(dp.icon)}</div><div class="sp"><div style="font-size:19px;font-weight:700">${esc(dp.name)}</div><div class="muted small">${staff.length} موظف</div></div>
-    ${isAdmin() ? `<button class="btn pri" onclick="App.noteForm('${safeId(id)}')">📌 ملاحظة لهذا القسم</button>` : ""}</div>
-  <div class="grid g4 mb">${Object.entries(ENT).map(([k, c]) => `<div class="card kpi" onclick="App.go('${k}','${safeId(id)}')"><div style="font-size:20px">${c.icon}</div><div class="l">${c.title}</div><div class="s muted">عرض سجلات القسم</div></div>`).join("")}</div>
+  <div class="row mb"><div class="chipi">${deptIc(dp.icon, "lg")}</div><div class="sp"><div style="font-size:19px;font-weight:700">${esc(dp.name)}</div><div class="muted small">${staff.length} موظف</div></div>
+    ${isAdmin() ? `<button class="btn pri" onclick="App.noteForm('${safeId(id)}')">${ic("pin")} ملاحظة لهذا القسم</button>` : ""}</div>
+  <div class="grid g4 mb">${Object.entries(ENT).map(([k, c]) => `<div class="card kpi" onclick="App.go('${k}','${safeId(id)}')"><div class="chipi">${ic(c.icon)}</div><div class="l">${c.title}</div><div class="s muted">عرض سجلات القسم</div></div>`).join("")}</div>
   <div class="grid g2">
-    <div class="card"><h3>👥 الموظفين</h3><div class="list">${staff.map(personRow).join("") || `<div class="empty">لا يوجد موظفين</div>`}</div></div>
-    <div><div class="card"><h3>🔔 تنبيهات القسم</h3><div class="list">${alerts.map((a) => `<div class="it"><span class="dot" style="background:${a.lvl === "h" ? "var(--red)" : "var(--amber)"}"></span><div>${esc(a.text)}</div></div>`).join("") || `<div class="muted small">لا توجد تنبيهات</div>`}</div></div>
-      <div class="card mt"><h3>📌 ملاحظات المدير</h3><div class="list">${notes.map((n) => `<div class="it"><div class="sp"><b>${esc(n.subject || "")}</b><div class="small">${esc(n.body)}</div>${n.reply ? `<div class="small muted">الرد: ${esc(n.reply)}</div>` : ""}</div><span class="badge">${esc(n.status)}</span></div>`).join("") || `<div class="muted small">لا توجد ملاحظات</div>`}</div></div></div>
+    <div class="card"><h3>${ic("users")} الموظفين</h3><div class="list">${staff.map(personRow).join("") || `<div class="empty">لا يوجد موظفين</div>`}</div></div>
+    <div><div class="card"><h3>${ic("bell")} تنبيهات القسم</h3><div class="list">${alerts.map((a) => `<div class="it"><span class="dot" style="background:${a.lvl === "h" ? "var(--red)" : "var(--amber)"}"></span><div>${esc(a.text)}</div></div>`).join("") || `<div class="muted small">لا توجد تنبيهات</div>`}</div></div>
+      <div class="card mt"><h3>${ic("pin")} ملاحظات المدير</h3><div class="list">${notes.map((n) => `<div class="it"><div class="sp"><b>${esc(n.subject || "")}</b><div class="small">${esc(n.body)}</div>${n.reply ? `<div class="small muted">الرد: ${esc(n.reply)}</div>` : ""}</div><span class="badge">${esc(n.status)}</span></div>`).join("") || `<div class="muted small">لا توجد ملاحظات</div>`}</div></div></div>
   </div>`;
 }
 function personRow(p) {
@@ -1015,9 +1317,9 @@ function viewPeople() {
   const all = S.people.filter((p) => p.status !== "pending" && (!q || [p.full_name, p.job_title, p.email, depName(p.department_id)].join(" ").includes(q)));
   const n = S.peopleN || 0, pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
   const list = all.slice(n * PAGE_SIZE, n * PAGE_SIZE + PAGE_SIZE);
-  const depOpts = S.deps.map((d) => `<option value="${d.id}">${esc(d.icon)} ${esc(d.name)}</option>`).join("");
+  const depOpts = S.deps.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
   return `
-  ${isAdmin() && pending.length ? `<div class="card mb"><h3>⏳ طلبات انضمام بانتظار موافقتك (${pending.length})</h3>
+  ${isAdmin() && pending.length ? `<div class="card mb"><h3>${ic("hourglass")} طلبات انضمام بانتظار موافقتك (${pending.length})</h3>
     <p class="muted small mb">ما يقدر الموظف يشوف أي بيانات قبل ما توافق وتحدد قسمه.</p>
     ${pending.map((p) => `<form class="row mb" style="border-top:1px solid var(--line);padding-top:10px" onsubmit="App.approve(event,'${safeId(p.id)}')">
       <div class="sp"><b>${esc(p.full_name || "بدون اسم")}</b><div class="muted small" dir="ltr">${esc(p.email)}</div><div class="muted small">${esc(p.job_title || "")} · سجّل ${fmtDate(p.created_at)}</div></div>
@@ -1035,9 +1337,9 @@ function viewPeople() {
       <div class="meta"><span class="badge">${esc(depName(p.department_id))}</span>${p.role === "admin" ? `<span class="badge b-green">مدير</span>` : ""}${p.status === "disabled" ? `<span class="badge b-red">موقوف</span>` : ""}${p.phone ? `<span class="badge" dir="ltr">${esc(p.phone)}</span>` : ""}</div>
     </div>`).join("")}</div>
   ${pages > 1 ? `<div class="row mt" style="justify-content:center">
-    <button class="btn sm ghost" ${n === 0 ? "disabled" : ""} onclick="App.peoplePage(-1)">→ السابق</button>
+    <button class="btn sm ghost" ${n === 0 ? "disabled" : ""} onclick="App.peoplePage(-1)">${ic("prev", "dir")} السابق</button>
     <span class="muted small">صفحة ${n + 1} من ${pages}</span>
-    <button class="btn sm ghost" ${n + 1 >= pages ? "disabled" : ""} onclick="App.peoplePage(1)">التالي ←</button></div>` : ""}`;
+    <button class="btn sm ghost" ${n + 1 >= pages ? "disabled" : ""} onclick="App.peoplePage(1)">التالي ${ic("next", "dir")}</button></div>` : ""}`;
 }
 
 // ===== Entity list =====
@@ -1048,9 +1350,9 @@ function viewEntity(k) {
   loadPage(k);
   const pages = Math.max(1, Math.ceil(st.total / PAGE_SIZE));
   const pager = st.total > PAGE_SIZE ? `<div class="row mt" style="justify-content:center">
-      <button class="btn sm ghost" ${st.n === 0 ? "disabled" : ""} onclick="App.pageTo('${k}', -1)">→ السابق</button>
+      <button class="btn sm ghost" ${st.n === 0 ? "disabled" : ""} onclick="App.pageTo('${k}', -1)">${ic("prev", "dir")} السابق</button>
       <span class="muted small">صفحة ${st.n + 1} من ${pages} · ${fmtNum(st.total)} سجل</span>
-      <button class="btn sm ghost" ${st.n + 1 >= pages ? "disabled" : ""} onclick="App.pageTo('${k}', 1)">التالي ←</button></div>` : "";
+      <button class="btn sm ghost" ${st.n + 1 >= pages ? "disabled" : ""} onclick="App.pageTo('${k}', 1)">التالي ${ic("next", "dir")}</button></div>` : "";
   const rows = st.rows;
   return `
   <div class="toolbar">
@@ -1061,9 +1363,9 @@ function viewEntity(k) {
   ${depF ? `<div class="mb"><span class="badge b-blue">قسم: ${esc(depName(depF))}</span> <a href="#" onclick="App.go('${k}');return false" class="small">عرض الكل</a></div>` : ""}
   ${rows === null ? `<div class="card empty"><span class="spin"></span></div>` :
     rows.length ? `<div class="muted small mb">${fmtNum(st.total)} سجل</div><div class="grid g3">${rows.map((r) => recCard(k, r)).join("")}</div>${pager}` :
-    `<div class="card empty"><div style="font-size:34px">${cfg.icon}</div>${st.q || st.status ? "لا توجد نتائج مطابقة" : "لا توجد سجلات بعد"}<br>
+    `<div class="card empty">${ic(cfg.icon, "xl")}<br>${st.q || st.status ? "لا توجد نتائج مطابقة" : "لا توجد سجلات بعد"}<br>
      <button class="btn pri mt" onclick="App.edit('${k}')">+ إضافة ${cfg.one}</button>
-     ${AI_EXTRACT.includes(k) ? `<div class="small mt">أو صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات ✨</div>` : ""}</div>`}`;
+     ${AI_EXTRACT.includes(k) ? `<div class="small mt">أو صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات</div>` : ""}</div>`}`;
 }
 function recCard(k, r) {
   const cfg = ENT[k];
@@ -1084,7 +1386,7 @@ function recCard(k, r) {
   return `<div class="rec" onclick="App.edit('${k}','${safeId(r.id)}')">
     <div class="t">${esc(r[cfg.primary])}</div>
     ${cfg.sub(r) ? `<div class="muted small">${esc(cfg.sub(r))}</div>` : ""}
-    ${k === "vehicles" && r.location ? `<div class="small">📍 ${esc(r.location)}</div>` : ""}
+    ${k === "vehicles" && r.location ? `<div class="small muted">${ic("mappin")} ${esc(r.location)}</div>` : ""}
     ${k === "legal_cases" && r.last_update ? `<div class="small" style="margin-top:4px">${esc(r.last_update.slice(0, 120))}</div>` : ""}
     ${cfg.progress ? `<div class="bar"><i style="width:${r.progress || 0}%"></i></div><div class="muted small">${r.progress || 0}% · ${fmtSAR(r.contract_value)}</div>` : ""}
     <div class="meta">${badges.join("")}</div></div>`;
@@ -1110,14 +1412,14 @@ function auditRows(st) {
   const changed = (r) => r.action === "update" && r.before && r.after ? Object.keys(r.after).filter((k) => JSON.stringify(r.after[k]) !== JSON.stringify(r.before[k])).filter((k) => k !== "updated_at").slice(0, 6).join("، ") : "";
   const pages = Math.max(1, Math.ceil(st.total / PAGE_SIZE));
   return `<table class="t">${st.rows.map((r) => `<tr>
-      <td class="small" style="white-space:nowrap">${fmtDate(r.at)}<div class="muted">${esc(new Date(r.at).toLocaleTimeString("ar-SA", { hour:"2-digit", minute:"2-digit" }))}</div></td>
+      <td class="small" style="white-space:nowrap">${fmtDate(r.at)}<div class="muted">${esc(new Date(r.at).toLocaleTimeString(LOC(), { hour:"2-digit", minute:"2-digit" }))}</div></td>
       <td><span class="badge">${esc(ACT_LABEL[r.action] || r.action)}</span> ${esc(ENT_LABEL[r.entity] || r.entity)}
-        ${changed(r) ? `<div class="muted small" dir="ltr" style="text-align:right">${esc(changed(r))}</div>` : ""}</td>
+        ${changed(r) ? `<div class="muted small" dir="ltr" style="text-align:start">${esc(changed(r))}</div>` : ""}</td>
       <td class="small">${esc(who(r.actor))}<div class="muted">${esc(SRC_LABEL[r.source] || r.source)}</div></td></tr>`).join("")}</table>
     ${pages > 1 ? `<div class="row mt" style="justify-content:center">
-      <button class="btn sm ghost" ${st.n === 0 ? "disabled" : ""} onclick="Gov.auditPage(-1)">→ السابق</button>
+      <button class="btn sm ghost" ${st.n === 0 ? "disabled" : ""} onclick="Gov.auditPage(-1)">${ic("prev", "dir")} السابق</button>
       <span class="muted small">صفحة ${st.n + 1} من ${pages}</span>
-      <button class="btn sm ghost" ${st.n + 1 >= pages ? "disabled" : ""} onclick="Gov.auditPage(1)">التالي ←</button></div>` : ""}`;
+      <button class="btn sm ghost" ${st.n + 1 >= pages ? "disabled" : ""} onclick="Gov.auditPage(1)">التالي ${ic("next", "dir")}</button></div>` : ""}`;
 }
 function viewTrash() {
   const rows = S.trash;
@@ -1125,20 +1427,20 @@ function viewTrash() {
     <div class="card">${!rows ? `<span class="spin"></span>` : !rows.length ? `<div class="empty">السلة فاضية</div>` :
       `<table class="t">${rows.map((r) => `<tr><td>${esc(r.label || "—")}<div class="muted small">${esc(ENT_LABEL[r.entity] || r.entity)}</div></td>
         <td class="small">${fmtDate(r.deleted_at)}<div class="muted">${esc(S.people.find((p) => p.id === r.deleted_by)?.full_name || "")}</div></td>
-        <td style="text-align:left"><button class="btn sm" onclick="Gov.restore('${esc(r.entity)}','${safeId(r.id)}')">↺ استرجاع</button></td></tr>`).join("")}</table>`}</div>`;
+        <td class="end"><button class="btn sm" onclick="Gov.restore('${esc(r.entity)}','${safeId(r.id)}')">${ic("undo")} استرجاع</button></td></tr>`).join("")}</table>`}</div>`;
 }
 const WA_STATUS = { needs_review:"بانتظار المراجعة", unmatched:"رقم غير معروف", converted:"تمت المعالجة", rejected:"مرفوضة" };
 function viewWhatsApp() {
   const rows = S.wa;
-  return `<div class="msg mb">💬 الرسائل الواردة من الواتساب تنتظر هنا مراجعتك قبل ما تدخل في بيانات الشركة. الربط الفعلي مع واتساب يحتاج حساب WhatsApp Business من Meta (لم يُفعّل بعد).</div>
+  return `<div class="msg mb">${ic("inboxmsg")} الرسائل الواردة من الواتساب تنتظر هنا مراجعتك قبل ما تدخل في بيانات الشركة. الربط الفعلي مع واتساب يحتاج حساب WhatsApp Business من Meta (لم يُفعّل بعد).</div>
     <div class="card">${!rows ? `<span class="spin"></span>` : !rows.length ? `<div class="empty">لا توجد رسائل بانتظار المراجعة</div>` :
       rows.map((m) => `<div class="mb" style="border-bottom:1px solid var(--line);padding-bottom:10px">
         <div class="row"><b class="sp">${esc(S.people.find((p) => p.id === m.profile_id)?.full_name || "")} <span class="muted small" dir="ltr">${esc(m.from_phone)}</span></b>
           <span class="badge">${esc(WA_STATUS[m.status] || m.status)}</span></div>
         <div class="muted small">${fmtDate(m.received_at)} · ${esc(m.msg_type)}</div>
-        ${m.body ? `<div class="mt">${esc(m.body)}</div>` : ""}${m.transcript ? `<div class="mt muted">🎤 ${esc(m.transcript)}</div>` : ""}
+        ${m.body ? `<div class="mt">${esc(m.body)}</div>` : ""}${m.transcript ? `<div class="mt muted">${ic("mic")} ${esc(m.transcript)}</div>` : ""}
         ${["needs_review", "unmatched"].includes(m.status) ? `<div class="row mt">
-          <button class="btn sm pri" onclick="Gov.waDecide('${safeId(m.id)}','converted')">✓ تمت المعالجة</button>
+          <button class="btn sm pri" onclick="Gov.waDecide('${safeId(m.id)}','converted')">${ic("check")} تمت المعالجة</button>
           <button class="btn sm danger" onclick="Gov.waDecide('${safeId(m.id)}','rejected')">رفض</button></div>` : ""}
       </div>`).join("")}</div>`;
 }
@@ -1147,7 +1449,7 @@ async function loadAIUsage() {
   try {
     const u = await rpc("ai_usage_summary", { cid:S.cid });
     const pct = u.budget_usd ? Math.min(100, Math.round((Number(u.month_spent_usd) / Number(u.budget_usd)) * 100)) : 0;
-    box.innerHTML = `<b>✨ استهلاك الذكاء الاصطناعي هذا الشهر</b>
+    box.innerHTML = `<b>${ic("sparkles")} استهلاك الذكاء الاصطناعي هذا الشهر</b>
       <div class="bar mt"><i style="width:${pct}%"></i></div>
       <div class="muted small">${fmtNum(u.month_requests)} طلب · $${Number(u.month_spent_usd).toFixed(2)} من $${Number(u.budget_usd ?? 0).toFixed(0)} · الحد اليومي لكل موظف ${fmtNum(u.daily_user_limit)} طلب</div>
       ${isSuper() ? "" : `<div class="muted small">تعديل الميزانية يتم عن طريق يقين.</div>`}`;
@@ -1173,7 +1475,7 @@ const Gov = {
   async restore(tbl, id) {
     const { error } = await sb.rpc("restore_deleted", { tbl, rid:id });
     if (error) return toast("خطأ: " + error.message);
-    toast("تم الاسترجاع ✅"); S.trash = null; await reload();
+    toast("تم الاسترجاع"); S.trash = null; await reload();
   },
   async wa() {
     const { data, error } = await sb.from("wa_inbound").select("*").eq("company_id", S.cid).order("received_at", { ascending:false }).limit(100);
@@ -1188,7 +1490,7 @@ const Gov = {
   // notifications (H6)
   bell() {
     const list = S.notifs ?? [];
-    modal(`<div class="row"><h3 class="sp">🔔 التنبيهات</h3>${list.some((n) => !n.read_at) ? `<button class="btn sm" onclick="Gov.readAll()">تحديد الكل كمقروء</button>` : ""}<button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${ic("bell")} التنبيهات</h3>${list.some((n) => !n.read_at) ? `<button class="btn sm" onclick="Gov.readAll()">تحديد الكل كمقروء</button>` : ""}<button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       ${list.length ? list.map((n) => `<div class="mb" style="border-bottom:1px solid var(--line);padding:8px 0;${n.read_at ? "opacity:.6" : ""}">
         <b>${esc(n.title)}</b>${n.body ? `<div class="small">${esc(n.body)}</div>` : ""}<div class="muted small">${fmtDate(n.created_at)}</div>
         ${n.entity && ENT[n.entity] && n.entity_id ? `<button class="btn sm mt" onclick="Gov.openNotif(${Number(n.id)})">فتح</button>` : ""}</div>`).join("")
@@ -1207,14 +1509,14 @@ const Gov = {
   // platform owner
   async events() {
     const { data, error } = await sb.from("system_events").select("*").order("at", { ascending:false }).limit(100);
-    modal(`<div class="row"><h3 class="sp">🩺 أحداث النظام والأخطاء</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${ic("pulse")} أحداث النظام والأخطاء</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       ${error ? `<div class="msg err">${esc(error.message)}</div>` : !(data ?? []).length ? `<div class="empty">لا توجد أحداث</div>` :
         `<table class="t">${data.map((e) => `<tr><td class="small" style="white-space:nowrap">${fmtDate(e.at)}</td>
           <td><span class="badge ${e.level === "error" ? "b-red" : e.level === "warn" ? "b-amber" : ""}">${esc(e.level)}</span> <span class="muted small">${esc(e.source)}</span>
-          <div class="small" dir="ltr" style="text-align:right">${esc(String(e.message).slice(0, 300))}</div></td></tr>`).join("")}</table>`}`);
+          <div class="small" dir="ltr" style="text-align:start">${esc(String(e.message).slice(0, 300))}</div></td></tr>`).join("")}</table>`}`);
   },
   inviteForm() {
-    modal(`<div class="row"><h3 class="sp">👤 دعوة مسؤول منصة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${ic("userplus")} دعوة مسؤول منصة</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       <p class="muted small mb">الشخص المدعو يسجل حساب جديد بنفس البريد (بدون رمز شركة) ويصير مسؤول منصة. صلاحيته كاملة على كل الشركات، فادعُ فقط من تثق فيه.</p>
       <form onsubmit="Gov.invite(event)"><label class="f"><span>البريد الإلكتروني</span><input class="in" name="email" type="email" required dir="ltr"></label>
       <button class="btn pri">إرسال الدعوة</button></form>`);
@@ -1223,7 +1525,7 @@ const Gov = {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.rpc("invite_platform_admin", { invite_email:f.get("email") });
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم حفظ الدعوة ✅");
+    App.close(); toast("تم حفظ الدعوة");
   },
 };
 window.Gov = Gov;
@@ -1233,7 +1535,7 @@ function viewProfile() {
   const p = S.me || {};
   return `<div class="card" style="max-width:560px">
     <div class="row mb">${avatar(p, "lg")}<div><b style="font-size:18px">${esc(p.full_name)}</b><div class="muted small">${esc(p.email)}</div>
-      <label class="btn sm mt">📷 تغيير الصورة<input type="file" accept="image/*" class="hidden" onchange="App.myPhoto(this)"></label></div></div>
+      <label class="btn sm mt">${ic("camera")} تغيير الصورة<input type="file" accept="image/*" class="hidden" onchange="App.myPhoto(this)"></label></div></div>
     <form onsubmit="App.saveProfile(event)">
       <label class="f"><span>الاسم الكامل</span><input class="in" name="full_name" value="${esc(p.full_name)}" required></label>
       <div class="two">
@@ -1246,33 +1548,33 @@ function viewProfile() {
       <button class="btn pri">حفظ</button>
     </form>
     <form class="mt" onsubmit="App.changePw(event)" style="border-top:1px solid var(--line);padding-top:16px">
-      <b>🔒 تغيير كلمة المرور</b>
+      <b class="row" style="gap:6px">${ic("lock")} تغيير كلمة المرور</b>
       <label class="f mt"><span>كلمة المرور الجديدة</span><input class="in pw" name="password" type="password" minlength="8" required dir="ltr" autocapitalize="off" autocorrect="off"></label>
       <label class="small muted row mb" style="gap:6px"><input type="checkbox" onchange="App.showPw(this.checked)"> إظهار</label>
       <button class="btn">تغيير</button>
     </form>
-    <div class="mt" id="mfaBox" style="border-top:1px solid var(--line);padding-top:16px"><b>🛡️ التحقق الثنائي</b><div class="muted small mt"><span class="spin"></span></div></div></div>`;
+    <div class="mt" id="mfaBox" style="border-top:1px solid var(--line);padding-top:16px"><b class="row" style="gap:6px">${ic("shield")} التحقق الثنائي</b><div class="muted small mt"><span class="spin"></span></div></div></div>`;
 }
 function viewSettings() {
   const s = S.settings;
   return `<div class="grid g2">
-    <div class="card"><h3>🏷️ هوية المنصة</h3>
+    <div class="card"><h3>${ic("tag")} هوية المنصة</h3>
       <p class="muted small mb">اسم المنصة يظهر لكل موظفي الشركة، مثل: DLPS Platform</p>
       <div class="risk mb"><div class="muted small">رمز تسجيل الموظفين (أرسله لموظفينك)</div><b dir="ltr" style="font-size:20px;letter-spacing:2px">${esc(S.company?.join_code)}</b>
         ${isSuper() ? `<div class="muted small mt">رمز تسجيل المدير: <b dir="ltr">${esc(S.company?.admin_code)}</b></div>` : ""}
-        <button class="btn sm mt" onclick="if(confirm('توليد رمز جديد؟ الرمز الحالي بيتوقف فوراً.'))App.regenCodes('${safeId(S.cid)}','join')">↻ رمز جديد</button></div>
-      <div class="row mb"><div class="logo" style="width:64px;height:64px">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : "🏢"}</div>
+        <button class="btn sm mt" onclick="if(confirmT('توليد رمز جديد؟ الرمز الحالي بيتوقف فوراً.'))App.regenCodes('${safeId(S.cid)}','join')">${ic("refresh")} رمز جديد</button></div>
+      <div class="row mb"><div class="logo" style="width:64px;height:64px">${s.logo_url ? `<img src="${esc(s.logo_url)}">` : ic("building", "lg")}</div>
         <label class="btn sm">رفع شعار الشركة<input type="file" accept="image/*" class="hidden" onchange="App.logo(this)"></label></div>
       <form onsubmit="App.saveSettings(event)">
         <label class="f"><span>اسم المنصة</span><input class="in" name="company_name" value="${esc(s.company_name)}" required></label>
         <button class="btn pri">حفظ</button>
       </form>
       <div id="aiUsage" class="mt" style="border-top:1px solid var(--line);padding-top:12px"><span class="spin"></span></div></div>
-    <div class="card"><h3>🏢 الأقسام</h3>
-      <table class="t">${S.deps.map((d) => `<tr><td style="width:36px">${esc(d.icon)}</td><td>${esc(d.name)}</td><td class="muted small">${S.people.filter((p) => p.department_id === d.id).length} موظف</td>
-        <td style="text-align:left"><button class="btn sm danger" onclick="App.delDept('${safeId(d.id)}')">حذف</button></td></tr>`).join("")}</table>
+    <div class="card"><h3>${ic("building")} الأقسام</h3>
+      <table class="t">${S.deps.map((d) => `<tr><td style="width:36px;color:var(--muted)">${deptIc(d.icon)}</td><td>${esc(d.name)}</td><td class="muted small">${S.people.filter((p) => p.department_id === d.id).length} موظف</td>
+        <td class="end"><button class="btn sm danger" onclick="App.delDept('${safeId(d.id)}')">حذف</button></td></tr>`).join("")}</table>
       <form class="row mt" onsubmit="App.addDept(event)">
-        <input class="in" name="icon" value="🏢" style="width:60px;text-align:center">
+        <select class="in" name="icon" style="flex:0 0 140px">${DEPT_ICON_CHOICES.map(([v, , l]) => `<option value="${v}">${l}</option>`).join("")}</select>
         <input class="in sp" name="name" placeholder="اسم قسم جديد" required>
         <button class="btn pri">إضافة</button>
       </form></div>
@@ -1294,8 +1596,8 @@ function entityForm(k, r = {}) {
   const defDep = r.department_id || (isAdmin() ? (cfg.def && depByName(cfg.def)) || S.me?.department_id : S.me?.department_id);
   const wide = cfg.fields.filter((f) => f.wide), narrow = cfg.fields.filter((f) => !f.wide);
   modal(`
-    <div class="row"><h3 class="sp">${isNew ? "إضافة " + cfg.one : "تعديل " + cfg.one}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
-    ${AI_EXTRACT.includes(k) ? `<label class="btn ai full mb" id="scanBtn">📷 صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات<input type="file" accept="image/*" capture="environment" class="hidden" onchange="App.scan('${k}', this)"></label>` : ""}
+    <div class="row"><h3 class="sp">${isNew ? "إضافة " + cfg.one : "تعديل " + cfg.one}</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
+    ${AI_EXTRACT.includes(k) ? `<label class="btn ai full mb" id="scanBtn">${ic("camera")} صوّر المستند وخل الذكاء الاصطناعي يعبّي البيانات<input type="file" accept="image/*" capture="environment" class="hidden" onchange="App.scan('${k}', this)"></label>` : ""}
     <form id="ef" onsubmit="App.save(event,'${k}','${safeId(r.id)}')">
       ${wide.filter((f) => f.req).map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}
       <div class="two">${narrow.map((f) => `<label class="f"><span>${f.l}</span>${fieldInput(f, r[f.k])}</label>`).join("")}</div>
@@ -1311,6 +1613,10 @@ function entityForm(k, r = {}) {
 // ===== Actions =====
 window.App = {
   authTab(t) { S.authTab = t; renderAuth(); },
+  theme() { THEME = THEME === "dark" ? "light" : "dark"; PREF.set("yq_theme", THEME); applyPrefs(); App.rerender(); },
+  lang() { LANG = LANG === "en" ? "ar" : "en"; PREF.set("yq_lang", LANG); applyPrefs(); App.rerender(); },
+  rerender() { if (S.session && S.me) renderShell(); else if (!S.session) renderAuth(); },
+  async refresh() { await reload(); toast("تم التحديث"); },
   async retry() { await loadPublic(); renderAuth(); },
 
   // ----- platform owner -----
@@ -1321,7 +1627,7 @@ window.App = {
   },
   companyForm(id) {
     const c = id ? S.companies.find((x) => x.id === id) : {};
-    modal(`<div class="row"><h3 class="sp">${id ? "إدارة الشركة" : "شركة جديدة"}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${id ? "إدارة الشركة" : "شركة جديدة"}</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       <form onsubmit="App.saveCompany(event,'${safeId(id)}')">
         <label class="f"><span>اسم الشركة / اسم المنصة لها</span><input class="in" name="name" value="${esc(c.name || "")}" placeholder="مثال: DLPS Platform" required></label>
         <label class="f"><span>ملاحظات داخلية (تظهر لك فقط)</span><textarea class="in" name="notes" placeholder="جهة التواصل، الباقة، تاريخ الاشتراك...">${esc(c.notes || "")}</textarea></label>
@@ -1331,11 +1637,11 @@ window.App = {
         </div>
         <label class="small row mb" style="gap:6px"><input type="checkbox" name="require_admin_mfa" ${c.require_admin_mfa ? "checked" : ""}> إلزام مدراء الشركة بالتحقق الثنائي (فعّله بعد ما يضيف المدير تطبيق المصادقة من ملفه الشخصي)</label>
         ${id ? `<div class="risk mb"><div class="small">رمز الموظفين: <b dir="ltr">${esc(c.join_code)}</b></div><div class="small">رمز المدير: <b dir="ltr">${esc(c.admin_code)}</b></div>
-          <button type="button" class="btn sm ghost mt" onclick="App.regenCodes('${safeId(id)}')">↻ توليد رموز جديدة</button></div>` :
+          <button type="button" class="btn sm ghost mt" onclick="App.regenCodes('${safeId(id)}')">${ic("refresh")} توليد رموز جديدة</button></div>` :
           `<p class="muted small mb">بيتم إنشاء ٧ أقسام افتراضية للشركة، ورمزين للتسجيل.</p>`}
         <div class="row"><button class="btn pri">${id ? "حفظ" : "إنشاء الشركة"}</button><span class="sp"></span>
-          ${id ? `<button type="button" class="btn ghost" onclick="App.toggleCompany('${safeId(id)}', ${!c.active})">${c.active ? "⏸ إيقاف الشركة" : "▶ تفعيل الشركة"}</button>
-          ${c.deleted_at ? `<button type="button" class="btn pri" onclick="App.restoreCompany('${safeId(id)}')">↺ استرجاع الشركة</button>` : `<button type="button" class="btn danger" onclick="App.delCompany('${safeId(id)}')">حذف</button>`}` : ""}</div>
+          ${id ? `<button type="button" class="btn ghost" onclick="App.toggleCompany('${safeId(id)}', ${!c.active})">${c.active ? ic("pause") + " إيقاف الشركة" : ic("play") + " تفعيل الشركة"}</button>
+          ${c.deleted_at ? `<button type="button" class="btn pri" onclick="App.restoreCompany('${safeId(id)}')">${ic("undo")} استرجاع الشركة</button>` : `<button type="button" class="btn danger" onclick="App.delCompany('${safeId(id)}')">حذف</button>`}` : ""}</div>
       </form>`);
   },
   async saveCompany(e, id) {
@@ -1360,7 +1666,7 @@ window.App = {
   },
   async delCompany(id) {
     const c = S.companies.find((x) => x.id === id);
-    if (!confirm(`حذف "${c?.name}"؟ بتتوقف الشركة فوراً، وتقدر تسترجعها خلال 30 يوم. بعدها تنحذف نهائياً مع بياناتها.`)) return;
+    if (!confirmT(`حذف "${c?.name}"؟ بتتوقف الشركة فوراً، وتقدر تسترجعها خلال 30 يوم. بعدها تنحذف نهائياً مع بياناتها.`)) return;
     const { error } = await sb.rpc("delete_company", { target:id });
     if (error) return toast("خطأ: " + error.message);
     if (S.cid === id) { S.cid = null; try { localStorage.removeItem("yq_cid"); } catch {} }
@@ -1369,7 +1675,7 @@ window.App = {
   async restoreCompany(id) {
     const { error } = await sb.rpc("restore_company", { target:id });
     if (error) return toast("خطأ: " + error.message);
-    App.close(); await reload(); toast("تم استرجاع الشركة ✅");
+    App.close(); await reload(); toast("تم استرجاع الشركة");
   },
   showPw(on) { document.querySelectorAll(".pw").forEach((i) => (i.type = on ? "text" : "password")); },
   async forgot() {
@@ -1384,14 +1690,14 @@ window.App = {
     if (String(f.get("password")).length < 8) { b.disabled = false; return renderAuth({ t:"err", m:"كلمة المرور لازم تكون 8 أحرف أو أكثر" }); }
     const { error } = await sb.auth.updateUser({ password:f.get("password") });
     if (error) { b.disabled = false; return renderAuth({ t:"err", m:error.message }); }
-    S.authTab = "login"; S.recovering = false; toast("تم تغيير كلمة المرور ✅"); boot((await sb.auth.getSession()).data.session);
+    S.authTab = "login"; S.recovering = false; toast("تم تغيير كلمة المرور"); boot((await sb.auth.getSession()).data.session);
   },
   async changePw(e) {
     e.preventDefault(); const f = new FormData(e.target);
     if (String(f.get("password")).length < 8) return toast("كلمة المرور لازم تكون 8 أحرف أو أكثر");
     const { error } = await sb.auth.updateUser({ password:f.get("password") });
     if (error) return toast("خطأ: " + error.message);
-    e.target.reset(); toast("تم تغيير كلمة المرور ✅");
+    e.target.reset(); toast("تم تغيير كلمة المرور");
   },
   async login(e) {
     e.preventDefault(); const f = new FormData(e.target);
@@ -1423,7 +1729,7 @@ window.App = {
     const { data, error } = await sb.auth.signUp({ email, password:f.get("password"),
       options:{ emailRedirectTo:location.origin + location.pathname, data:{ full_name:f.get("full_name"), company_code:code, job_title:f.get("job_title"), phone:f.get("phone") } } });
     if (error) return renderAuth({ t:"err", m:error.message.includes("registered") ? "هذا البريد مسجل مسبقاً" : error.message.includes("Database error") ? "رمز الشركة غير صحيح (أو لا توجد دعوة لهذا البريد)" : error.message });
-    if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب ✅ فعّل حسابك من الرابط اللي وصلك على بريدك، ثم سجّل دخولك. بعدها ينتظر حسابك موافقة مدير الشركة." }); }
+    if (!data.session) { S.authTab = "login"; renderAuth({ t:"ok", m:"تم إنشاء الحساب فعّل حسابك من الرابط اللي وصلك على بريدك، ثم سجّل دخولك. بعدها ينتظر حسابك موافقة مدير الشركة." }); }
   },
   async logout() { try { localStorage.removeItem("yq_cid"); } catch {} S.cid = null; S.company = null; S.brief = null; S.chat = []; S.view = "home"; await sb.auth.signOut(); },
   menu(o) { $("#side")?.classList.toggle("open", o); $("#ov")?.classList.toggle("open", o); },
@@ -1457,10 +1763,10 @@ window.App = {
     const q = id ? sb.from(k).update(row).eq("id", id) : sb.from(k).insert({ ...row, company_id:S.cid });
     const { error } = await q;
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم الحفظ ✅"); await reload();
+    App.close(); toast("تم الحفظ"); await reload();
   },
   async del(k, id) {
-    if (!confirm("نقل السجل إلى سلة المحذوفات؟ تقدر تسترجعه خلال 30 يوم.")) return;
+    if (!confirmT("نقل السجل إلى سلة المحذوفات؟ تقدر تسترجعه خلال 30 يوم.")) return;
     const { error } = await sb.rpc("soft_delete", { tbl:k, rid:id });
     if (error) return toast("خطأ: " + error.message);
     App.close(); toast("نُقل إلى سلة المحذوفات"); await reload();
@@ -1481,7 +1787,7 @@ window.App = {
           el.style.borderColor = "var(--green)";
         }
       }
-      toast(n ? `✨ تم تعبئة ${n} حقول تلقائياً، راجعها ثم احفظ` : "ما قدرت أقرأ بيانات واضحة من الصورة");
+      toast(n ? `تم تعبئة ${n} حقول تلقائياً، راجعها ثم احفظ` : "ما قدرت أقرأ بيانات واضحة من الصورة");
       btn.innerHTML = old;
     } catch (err) { btn.innerHTML = old; toast(err.message); }
   },
@@ -1498,14 +1804,14 @@ window.App = {
     const history = [...S.chat];
     S.chat.push({ role:"user", content:text }); S.chatBusy = true; renderView();
     try { const { answer } = await ai({ mode:"chat", question:text, history }); S.chat.push({ role:"assistant", content:answer }); }
-    catch (err) { S.chat.push({ role:"assistant", content:"⚠️ " + err.message }); }
+    catch (err) { S.chat.push({ role:"assistant", content:err.message }); }
     S.chatBusy = false; if (S.view === "ai") { renderView(); $("#q")?.focus(); }
   },
 
   noteForm(dep = "", subject = "", body = "") {
-    modal(`<div class="row"><h3 class="sp">📌 ملاحظة لقسم</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${ic("pin")} ملاحظة لقسم</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       <form onsubmit="App.saveNote(event)">
-        <label class="f"><span>القسم</span><select class="in" name="department_id" required>${S.deps.map((d) => `<option value="${d.id}" ${d.id === dep ? "selected" : ""}>${esc(d.icon)} ${esc(d.name)}</option>`).join("")}</select></label>
+        <label class="f"><span>القسم</span><select class="in" name="department_id" required>${S.deps.map((d) => `<option value="${d.id}" ${d.id === dep ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>
         <label class="f"><span>الموضوع</span><input class="in" name="subject" value="${esc(subject)}"></label>
         <label class="f"><span>الملاحظة</span><textarea class="in" name="body" required>${esc(body)}</textarea></label>
         <label class="f"><span>المطلوب قبل (اختياري)</span><input class="in" type="date" name="due_date"></label>
@@ -1520,33 +1826,33 @@ window.App = {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.from("manager_notes").insert({ company_id:S.cid, department_id:f.get("department_id"), subject:f.get("subject") || null, body:f.get("body"), due_date:f.get("due_date") || null });
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم إرسال الملاحظة ✅"); await reload();
+    App.close(); toast("تم إرسال الملاحظة"); await reload();
   },
   replyForm(id) {
     const n = (S.notes ?? []).find((x) => x.id === id); if (!n) return;
-    modal(`<div class="row"><h3 class="sp">💬 الرد على الملاحظة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${ic("chat")} الرد على الملاحظة</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       <div class="risk mb">${esc(n.body)}</div>
       <form onsubmit="App.saveReply(event,'${safeId(id)}')">
         <label class="f"><span>ردك</span><textarea class="in" name="reply" id="replyTxt" required>${esc(n.reply || "")}</textarea></label>
         <div class="row"><button class="btn pri">إرسال الرد</button>
-          <button type="button" class="btn ai" id="draftBtn" onclick="App.draftReply('${safeId(id)}')">✨ اقترح رد</button></div></form>`);
+          <button type="button" class="btn ai" id="draftBtn" onclick="App.draftReply('${safeId(id)}')">${ic("sparkles")} اقترح رد</button></div></form>`);
   },
   async draftReply(id) {
     const n = (S.notes ?? []).find((x) => x.id === id), b = $("#draftBtn"); if (!n) return;
     b.disabled = true; b.innerHTML = `<span class="spin"></span>`;
     try { const { text } = await ai({ mode:"note_reply", note_id:n.id }); $("#replyTxt").value = text; }
     catch (err) { toast(err.message); }
-    b.disabled = false; b.innerHTML = "✨ اقترح رد";
+    b.disabled = false; b.innerHTML = ic("sparkles") + " اقترح رد";
   },
   async saveReply(e, id) {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.from("manager_notes").update({ reply:f.get("reply"), status:"تم الرد" }).eq("id", id);
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم إرسال الرد ✅"); await reload();
+    App.close(); toast("تم إرسال الرد"); await reload();
   },
   async noteStatus(id, status) { await sb.from("manager_notes").update({ status }).eq("id", id); await reload(); },
   async delNote(id) {
-    if (!confirm("نقل الملاحظة إلى سلة المحذوفات؟")) return;
+    if (!confirmT("نقل الملاحظة إلى سلة المحذوفات؟")) return;
     const { error } = await sb.rpc("soft_delete", { tbl:"manager_notes", rid:id });
     if (error) return toast("خطأ: " + error.message);
     await reload();
@@ -1554,7 +1860,7 @@ window.App = {
 
   personForm(id) {
     const p = S.people.find((x) => x.id === id); if (!p) return;
-    modal(`<div class="row"><h3 class="sp">بيانات الموظف</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">بيانات الموظف</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       <div class="row mb">${avatar(p, "lg")}<div><b>${esc(p.full_name)}</b><div class="muted small">${esc(p.email)}</div><div class="muted small">انضم ${fmtDate(p.created_at)}</div></div></div>
       <form onsubmit="App.savePerson(event,'${safeId(id)}')">
         <label class="f"><span>الاسم</span><input class="in" name="full_name" value="${esc(p.full_name)}"></label>
@@ -1564,9 +1870,9 @@ window.App = {
         <label class="f"><span>الصلاحية</span><select class="in" name="role" ${p.id === S.me.id ? "disabled" : ""}><option value="employee" ${p.role === "employee" ? "selected" : ""}>موظف</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مدير (وصول كامل)</option></select></label></div>
         <div class="row mt"><button class="btn pri">حفظ</button><span class="sp"></span>
           ${p.id !== S.me.id ? (p.status === "disabled"
-            ? `<button type="button" class="btn" onclick="App.setStatus('${safeId(id)}','active')">▶ إعادة تفعيل</button>`
-            : `<button type="button" class="btn" onclick="App.setStatus('${safeId(id)}','disabled')">⏸ إيقاف الحساب</button>`) +
-            `<button type="button" class="btn danger" onclick="App.delUser('${safeId(id)}')">🗑 حذف المستخدم</button>` : ""}</div>
+            ? `<button type="button" class="btn" onclick="App.setStatus('${safeId(id)}','active')">${ic("play")} إعادة تفعيل</button>`
+            : `<button type="button" class="btn" onclick="App.setStatus('${safeId(id)}','disabled')">${ic("pause")} إيقاف الحساب</button>`) +
+            `<button type="button" class="btn danger" onclick="App.delUser('${safeId(id)}')">${ic("trash")} حذف المستخدم</button>` : ""}</div>
       </form>`);
   },
   async savePerson(e, id) {
@@ -1575,24 +1881,24 @@ window.App = {
     if (f.get("role")) row.role = f.get("role");
     const { error } = await sb.from("profiles").update(row).eq("id", id);
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast("تم الحفظ ✅"); await reload();
+    App.close(); toast("تم الحفظ"); await reload();
   },
   async approve(e, id) {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.rpc("approve_member", { target:id, dept:f.get("dept"), new_role:f.get("role") || "employee" });
     if (error) return toast("خطأ: " + error.message);
-    toast("تم تفعيل الحساب ✅"); await reload();
+    toast("تم تفعيل الحساب"); await reload();
   },
   async setStatus(id, st) {
     const p = S.people.find((x) => x.id === id);
-    if (st === "disabled" && !confirm(`إيقاف حساب ${p?.full_name || ""}؟ ما يقدر يدخل لين تعيد تفعيله.`)) return;
+    if (st === "disabled" && !confirmT(`إيقاف حساب ${p?.full_name || ""}؟ ما يقدر يدخل لين تعيد تفعيله.`)) return;
     const { error } = await sb.rpc("set_member_status", { target:id, new_status:st });
     if (error) return toast("خطأ: " + error.message);
-    App.close(); toast(st === "active" ? "تم التفعيل ✅" : "تم إيقاف الحساب"); await reload();
+    App.close(); toast(st === "active" ? "تم التفعيل" : "تم إيقاف الحساب"); await reload();
   },
   async delUser(id) {
     const p = S.people.find((x) => x.id === id);
-    if (!confirm(`حذف ${p?.full_name} نهائياً من المنصة؟ ما يقدر يدخل بعدها.`)) return;
+    if (!confirmT(`حذف ${p?.full_name} نهائياً من المنصة؟ ما يقدر يدخل بعدها.`)) return;
     const { error } = await sb.rpc("admin_delete_user", { target:id });
     if (error) return toast("خطأ: " + error.message);
     App.close(); toast("تم حذف المستخدم"); await reload();
@@ -1603,7 +1909,7 @@ window.App = {
     openCropper(file, async (blob) => {
       try { const url = await uploadBlob(blob, S.me.id);
         await sb.from("profiles").update({ avatar_url:url }).eq("id", S.me.id);
-        S.me.avatar_url = url; App.close(); await reload(); toast("تم تحديث الصورة ✅"); }
+        S.me.avatar_url = url; App.close(); await reload(); toast("تم تحديث الصورة"); }
       catch (err) { App.close(); toast("خطأ: " + err.message); }
     });
   },
@@ -1615,11 +1921,11 @@ window.App = {
     const memIds = new Set(id ? S.roomMembers.filter((m) => m.room_id === id).map((m) => m.user_id) : []);
     const people = S.people.filter((p) => p.id !== S.me?.id);
     if (id && !can) {
-      return modal(`<div class="row"><h3 class="sp">أعضاء الغرفة</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      return modal(`<div class="row"><h3 class="sp">أعضاء الغرفة</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
         <div class="list">${roomMembers(id).map(personRow).join("")}</div>
         <button class="btn danger mt" onclick="App.leaveRoom('${safeId(id)}')">مغادرة الغرفة</button>`);
     }
-    modal(`<div class="row"><h3 class="sp">${id ? "إدارة الغرفة" : "🗣️ غرفة عمليات جديدة"}</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${id ? "إدارة الغرفة" : "غرفة عمليات جديدة"}</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       <form onsubmit="App.saveRoom(event,'${safeId(id)}')">
         <label class="f"><span>موضوع الغرفة</span><input class="in" name="title" value="${esc(r.title || "")}" placeholder="مثال: تعطل الرافعة في موقع أبقيق" required></label>
         <label class="f"><span>وصف مختصر (اختياري)</span><textarea class="in" name="description" style="min-height:60px">${esc(r.description || "")}</textarea></label>
@@ -1628,7 +1934,7 @@ window.App = {
           <div id="pickList" style="max-height:260px;overflow-y:auto;margin-top:6px">${people.map((p) => `
             <label class="pick"><input type="checkbox" name="m" value="${p.id}" ${memIds.has(p.id) ? "checked" : ""}>${avatar(p)}<div><b>${esc(p.full_name)}</b><div class="muted small">${esc(depName(p.department_id))}${p.job_title ? " · " + esc(p.job_title) : ""}</div></div></label>`).join("")}</div></div>
         <div class="row mt"><button class="btn pri">${id ? "حفظ" : "إنشاء الغرفة"}</button><span class="sp"></span>
-          ${id ? `<button type="button" class="btn ghost" onclick="App.roomStatus('${safeId(id)}','${r.status === "مفتوحة" ? "مغلقة" : "مفتوحة"}')">${r.status === "مفتوحة" ? "🔒 إغلاق الغرفة" : "🔓 فتح الغرفة"}</button>
+          ${id ? `<button type="button" class="btn ghost" onclick="App.roomStatus('${safeId(id)}','${r.status === "مفتوحة" ? "مغلقة" : "مفتوحة"}')">${r.status === "مفتوحة" ? ic("lock") + " إغلاق الغرفة" : ic("unlock") + " فتح الغرفة"}</button>
             <button type="button" class="btn danger" onclick="App.delRoom('${safeId(id)}')">حذف</button>` : ""}</div>
       </form>`);
   },
@@ -1651,7 +1957,7 @@ window.App = {
       rid = data.id;
       if (chosen.length) { const r2 = await sb.from("room_members").insert(chosen.map((u) => ({ room_id:rid, user_id:u }))); if (r2.error) toast("خطأ: " + r2.error.message); }
     }
-    App.close(); await loadAll(); App.go("room", rid); toast(id ? "تم الحفظ ✅" : "تم إنشاء الغرفة ✅");
+    App.close(); await loadAll(); App.go("room", rid); toast(id ? "تم الحفظ" : "تم إنشاء الغرفة");
   },
   async roomStatus(id, status) {
     const { error } = await sb.from("rooms").update({ status }).eq("id", id);
@@ -1659,7 +1965,7 @@ window.App = {
     App.close(); await loadAll(); renderShell();
   },
   async delRoom(id) {
-    if (!confirm("حذف الغرفة وكل رسائلها نهائياً؟")) return;
+    if (!confirmT("حذف الغرفة وكل رسائلها نهائياً؟")) return;
     const msgs = (S.roomMsgs?.[id] ?? []).filter((m) => m.file_path).map((m) => m.file_path);
     if (msgs.length) await sb.storage.from("rooms").remove(msgs);
     const { error } = await sb.from("rooms").delete().eq("id", id);
@@ -1667,7 +1973,7 @@ window.App = {
     App.close(); await loadAll(); App.go("rooms");
   },
   async leaveRoom(id) {
-    if (!confirm("تبي تغادر الغرفة؟")) return;
+    if (!confirmT("تبي تغادر الغرفة؟")) return;
     await sb.from("room_members").delete().eq("room_id", id).eq("user_id", S.me.id);
     App.close(); await loadAll(); App.go("rooms");
   },
@@ -1676,11 +1982,11 @@ window.App = {
     try {
       const { text } = await ai({ mode:"room_summary", room_id:id });
       S.lastSummary = text;
-      modal(`<div class="row"><h3 class="sp">✨ ملخص النقاش</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+      modal(`<div class="row"><h3 class="sp">${ic("sparkles")} ملخص النقاش</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
         <div style="white-space:pre-wrap;line-height:1.9">${md(text)}</div>
-        <div class="row mt"><button class="btn pri" onclick="App.postSummary()">📌 انشر الملخص في الغرفة</button><button class="btn ghost" onclick="App.close()">إغلاق</button></div>`);
+        <div class="row mt"><button class="btn pri" onclick="App.postSummary()">${ic("pin")} انشر الملخص في الغرفة</button><button class="btn ghost" onclick="App.close()">إغلاق</button></div>`);
     } catch (err) { toast(err.message); }
-    if (b) { b.disabled = false; b.innerHTML = "✨ لخّص النقاش"; }
+    if (b) { b.disabled = false; b.innerHTML = ic("sparkles") + " لخّص النقاش"; }
   },
   async postSummary() { App.close(); await Room.post({ kind:"ai", body:S.lastSummary }); },
   async saveProfile(e) {
@@ -1689,17 +1995,17 @@ window.App = {
     if (f.has("department_id") && (isAdmin() || !S.me.department_id)) row.department_id = f.get("department_id") || null;
     const { error } = await sb.from("profiles").update(row).eq("id", S.me.id);
     if (error) return toast("خطأ: " + error.message);
-    toast("تم الحفظ ✅"); await reload();
+    toast("تم الحفظ"); await reload();
   },
   async saveSettings(e) {
     e.preventDefault(); const f = new FormData(e.target);
     const { error } = await sb.from("companies").update({ name:f.get("company_name") }).eq("id", S.cid);
     if (error) return toast("خطأ: " + error.message);
-    toast("تم الحفظ ✅"); await reload();
+    toast("تم الحفظ"); await reload();
   },
   async logo(input) {
     const file = input.files[0]; if (!file) return;
-    try { const url = await uploadImage(file, S.me.id + "/logo"); await sb.from("companies").update({ logo_url:url }).eq("id", S.cid); await reload(); toast("تم رفع الشعار ✅"); }
+    try { const url = await uploadImage(file, S.me.id + "/logo"); await sb.from("companies").update({ logo_url:url }).eq("id", S.cid); await reload(); toast("تم رفع الشعار"); }
     catch (err) { toast("خطأ: " + err.message); }
   },
   async addDept(e) {
@@ -1709,7 +2015,7 @@ window.App = {
     await reload();
   },
   async delDept(id) {
-    if (!confirm("حذف القسم؟ الموظفين والسجلات فيه بتصير بدون قسم.")) return;
+    if (!confirmT("حذف القسم؟ الموظفين والسجلات فيه بتصير بدون قسم.")) return;
     await sb.from("departments").delete().eq("id", id); await reload();
   },
 };
@@ -1720,8 +2026,8 @@ const MFA = {
   async box() {
     const el = $("#mfaBox"); if (!el) return;
     const f = await MFA.factors();
-    el.innerHTML = `<b>🛡️ التحقق الثنائي</b>` + (f.length
-      ? `<div class="msg ok mt">مفعّل ✅ عند الدخول بنطلب منك رمز من تطبيق المصادقة.</div><button class="btn sm danger mt" onclick="MFA.remove('${safeId(f[0].id)}')">إلغاء التحقق الثنائي</button>`
+    el.innerHTML = `<b class="row" style="gap:6px">${ic("shield")} التحقق الثنائي</b>` + (f.length
+      ? `<div class="msg ok mt">مفعّل. عند الدخول بنطلب منك رمز من تطبيق المصادقة.</div><button class="btn sm danger mt" onclick="MFA.remove('${safeId(f[0].id)}')">إلغاء التحقق الثنائي</button>`
       : `<p class="muted small mt">يحمي حسابك لو انسرقت كلمة المرور. تحتاج تطبيق مصادقة في جوالك (Google Authenticator أو Microsoft Authenticator).${isAdmin() ? " <b>ننصح فيه بقوة لحسابات المدراء.</b>" : ""}</p>
          <button class="btn sm mt" onclick="MFA.enroll()">تفعيل التحقق الثنائي</button>`);
   },
@@ -1730,7 +2036,7 @@ const MFA = {
     for (const x of old.filter((x) => x.status !== "verified")) await sb.auth.mfa.unenroll({ factorId:x.id });
     const { data, error } = await sb.auth.mfa.enroll({ factorType:"totp", friendlyName:"Yaqen " + new Date().toISOString().slice(0, 10) });
     if (error) return toast("خطأ: " + error.message);
-    modal(`<div class="row"><h3 class="sp">🛡️ تفعيل التحقق الثنائي</h3><button class="btn sm ghost" onclick="App.close()">✕</button></div>
+    modal(`<div class="row"><h3 class="sp">${ic("shield")} تفعيل التحقق الثنائي</h3><button class="btn sm ghost icon" title="إغلاق" onclick="App.close()">${ic("x")}</button></div>
       <p class="small">1) افتح تطبيق المصادقة وامسح الرمز:</p>
       <div style="background:#fff;padding:10px;border-radius:12px;width:200px;margin:10px auto"><img src="${esc(data.totp.qr_code)}" style="width:180px;height:180px"></div>
       <p class="muted small">أو اكتب المفتاح يدوياً: <b dir="ltr">${esc(data.totp.secret)}</b></p>
@@ -1742,17 +2048,17 @@ const MFA = {
     e.preventDefault(); const code = new FormData(e.target).get("code");
     const { error } = await sb.auth.mfa.challengeAndVerify({ factorId, code });
     if (error) return toast("الرمز غير صحيح، جرّب الرمز الجديد");
-    App.close(); toast("تم تفعيل التحقق الثنائي ✅"); MFA.box();
+    App.close(); toast("تم تفعيل التحقق الثنائي"); MFA.box();
   },
   async remove(factorId) {
-    if (!confirm("إلغاء التحقق الثنائي؟ حسابك بيصير محمي بكلمة المرور فقط.")) return;
+    if (!confirmT("إلغاء التحقق الثنائي؟ حسابك بيصير محمي بكلمة المرور فقط.")) return;
     const { error } = await sb.auth.mfa.unenroll({ factorId });
     if (error) return toast(error.message.includes("aal2") ? "سجّل خروج وادخل مرة ثانية برمز التحقق، ثم ألغِه" : "خطأ: " + error.message);
     toast("تم الإلغاء"); MFA.box();
   },
   // login step-up: boot calls this when the account has a verified factor but this session is aal1
   challenge(factorId, message) {
-    $("#app").innerHTML = `<div class="auth"><div class="auth-card"><div style="font-size:40px;text-align:center">🛡️</div>
+    $("#app").innerHTML = `<div class="auth"><div class="auth-card"><div style="text-align:center;color:var(--green)">${ic("shield", "xl")}</div>
       <p class="mt mb">اكتب الرمز من تطبيق المصادقة في جوالك</p>
       <form onsubmit="MFA.verifyLogin(event,'${safeId(factorId)}')">
         <input class="in mb" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required dir="ltr" autofocus>
@@ -1779,7 +2085,7 @@ async function boot(session) {
   let acct = null;
   try { acct = await rpc("my_account"); } catch (err) { reportError(err?.message || err, { at:"my_account" }); }
   if (!acct) return blocked("ما قدرنا نلقى ملفك في المنصة. تواصل مع مدير شركتك.");
-  if (acct.status === "pending") return blocked(`تم إنشاء حسابك في ${acct.company_name || "الشركة"} ✅ وهو الحين بانتظار موافقة مدير الشركة. بيحدد قسمك ويفعّل حسابك، بعدها تقدر تدخل.`, "⏳");
+  if (acct.status === "pending") return blocked(`تم إنشاء حسابك في ${acct.company_name || "الشركة"}، وهو الحين بانتظار موافقة مدير الشركة. بيحدد قسمك ويفعّل حسابك، بعدها تقدر تدخل.`, "hourglass");
   if (acct.status === "disabled") return blocked("حسابك موقوف حالياً. تواصل مع مدير شركتك.");
   // M5: an account with a verified authenticator must enter the code before using the platform
   const { data:aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -1802,8 +2108,8 @@ async function boot(session) {
   if (!S.company) return blocked("حساب شركتك موقوف حالياً. تواصل مع مدير شركتك أو مع يقين.");
   renderShell();
 }
-function blocked(m, icon = "⏸") {
-  $("#app").innerHTML = `<div class="auth"><div class="auth-card" style="text-align:center"><div style="font-size:40px">${esc(icon)}</div><p class="mt">${esc(m)}</p>
+function blocked(m, icon = "pause") {
+  $("#app").innerHTML = `<div class="auth"><div class="auth-card" style="text-align:center"><div style="color:var(--green)">${ic(icon, "xl")}</div><p class="mt">${esc(m)}</p>
     <button class="btn mt" onclick="App.logout()">تسجيل الخروج</button><div class="powered">مدعوم بتقنية <b style="color:var(--green)">يقين AI</b></div></div></div>`;
 }
 let started = false;
