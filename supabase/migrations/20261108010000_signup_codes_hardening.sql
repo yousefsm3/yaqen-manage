@@ -13,9 +13,8 @@ revoke execute on function public.secure_code(int) from public, anon, authentica
 
 alter table public.companies alter column join_code set default public.secure_code(12);
 alter table public.companies alter column admin_code set default public.secure_code(16);
--- rotate existing weak codes (6 / 10 hex chars). Admins see the new codes in Settings.
-update public.companies set join_code = public.secure_code(12) where length(join_code) < 12;
-update public.companies set admin_code = public.secure_code(16) where length(admin_code) < 16;
+-- (existing weak codes are rotated further below, AFTER protect_company is replaced:
+--  the old trigger silently reverts code changes - found during the production rollout.)
 
 -- ---------- C3: membership status + approval ----------
 alter table public.profiles add column if not exists status text not null default 'active'
@@ -139,6 +138,10 @@ begin
   end if;
   return new;
 end $$;
+
+-- rotate existing weak codes (6 / 10 hex chars). Must run after the new protect_company above.
+update public.companies set join_code = public.secure_code(12) where length(join_code) < 12;
+update public.companies set admin_code = public.secure_code(16) where length(admin_code) < 16;
 
 -- ---------- admin actions ----------
 create or replace function public.approve_member(target uuid, dept uuid, new_role text default 'employee') returns void
