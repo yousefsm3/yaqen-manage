@@ -1,0 +1,75 @@
+# Nightly encrypted backup of PRODUCTION + automatic restore drill. Free (GitHub Actions minutes).
+#  1. pg_dump of production (read-only: it never writes to production)
+#  2. restore that same file into a throwaway Postgres 17 inside the runner, and compare the fingerprint
+#     (row counts + checksums of every table, policies, grants, auth users, storage objects)
+#  3. keep the encrypted file 14 days as a workflow artifact
+# The job fails (and GitHub e-mails the repo owner) if the backup OR the restore check fails.
+#
+# Inactive until the owner adds two repository secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_URL      Supabase -> Connect -> "Session pooler" URI, with the database password filled in
+#                        (GitHub runners have no IPv6, so the direct db.<ref>.supabase.co host does not work)
+#   BACKUP_PASSPHRASE    long random passphrase; ALSO keep it outside GitHub - without it no backup can be read
+# The repository is public: artifacts of public repos are downloadable by GitHub users, so encryption is mandatory.
+# Not covered: files in Storage buckets (photos, room attachments) - see docs/RUNBOOK.md.
+name: Nightly backup
+on:
+  schedule: [{ cron: "17 23 * * *" }]     # 02:17 Riyadh
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    services:
+      drill:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: drill }
+        ports: ["55432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        id: s
+        env:
+          U: ${{ secrets.SUPABASE_DB_URL }}
+          P: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$U" ] || [ -z "$P" ]; then
+            echo "::warning::Backup secrets not configured - nothing was backed up (docs/RUNBOOK.md)"; echo "ok=false" >> "$GITHUB_OUTPUT"
+          else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Platform health check (public endpoint, publishable key)
+        run: |
+          curl -fsS -X POST "https://zalfumkzlnpygvemxayb.supabase.co/rest/v1/rpc/health" \
+            -H "apikey: sb_publishable_IeygDMV4GdMRU4it2FfJ9A_WqP0Al09" -H "Content-Type: application/json" -d '{}' \
+            || echo "::warning::health() did not answer (project paused, or migrations not deployed yet)"
+      - name: Postgres 17 client
+        if: steps.s.outputs.ok == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+      - name: Dump production (encrypted)
+        if: steps.s.outputs.ok == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          INCLUDE_AUTH: "1"
+        run: scripts/backup.sh backups && test -z "$(ls backups/*.dump 2>/dev/null)"
+      - name: Restore drill into a throwaway database and verify
+        if: steps.s.outputs.ok == 'true'
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          TARGET_URL: postgres://postgres:drill@localhost:55432/postgres
+          CREATE_MISSING_ROLES: "1"
+        run: |
+          psql "$TARGET_URL" -X -q -v ON_ERROR_STOP=1 -f scripts/prepare_restore_target.sql
+          scripts/restore.sh backups/*.dump.gpg
+          rm -f backups/*.restored.manifest
+      - uses: actions/upload-artifact@v4
+        if: steps.s.outputs.ok == 'true'
+        with:
+          name: yaqen-backup-${{ github.run_id }}
+          path: backups/
+          retention-days: 14

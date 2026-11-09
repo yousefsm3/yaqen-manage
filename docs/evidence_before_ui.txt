@@ -1,0 +1,18 @@
+PASS | H1 brief rendered with payloads (button for valid department present)
+FAIL | H1 clicking 'send as note' with hostile AI text runs no script | {"js":1,"img":0}
+FAIL | scenario crashed | page.inputValue: Timeout 4000ms exceeded.
+FAIL | H2 first page shows 50 of 120 invoices | 120
+FAIL | H2 pager shows page 1 of 3 and the true total
+FAIL | scenario crashed | page.click: Timeout 4000ms exceeded.
+FAIL | C3 signup form has no department picker
+FAIL | M5 signup password requires 8+ characters
+PASS | M5 7-character password is rejected before reaching the server
+FAIL | C3 pending account sees only the waiting screen
+FAIL | C3 disabled account is blocked
+FAIL | C3 admin sees the pending-approval list
+FAIL | scenario crashed | page.selectOption: Timeout 4000ms exceeded.
+FAIL | scenario crashed | page.click: Timeout 4000ms exceeded.
+FAIL | M5 account with authenticator must enter a code before the app opens
+FAIL | scenario crashed | page.fill: Timeout 4000ms exceeded.
+FAIL | M5 admin of a company that requires MFA is told admin powers are paused
+---- 2 passed, 15 failed of 17

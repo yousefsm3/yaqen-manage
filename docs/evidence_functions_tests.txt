@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: H4 cost: 100k in + 20k out at $2/$10 per MTok = $0.40
+ok 1 - H4 cost: 100k in + 20k out at $2/$10 per MTok = $0.40
+  ---
+  duration_ms: 0.754929
+  type: 'test'
+  ...
+# Subtest: prompt injection: data cannot close the <company_data> wrapper
+ok 2 - prompt injection: data cannot close the <company_data> wrapper
+  ---
+  duration_ms: 1.642083
+  type: 'test'
+  ...
+# Subtest: parseJson tolerates prose around JSON and garbage
+ok 3 - parseJson tolerates prose around JSON and garbage
+  ---
+  duration_ms: 1.583456
+  type: 'test'
+  ...
+# Subtest: shapeBrief: bounded plain strings, clamped score, whitelisted level
+ok 4 - shapeBrief: bounded plain strings, clamped score, whitelisted level
+  ---
+  duration_ms: 0.289689
+  type: 'test'
+  ...
+# Subtest: M1 shapeTranslation keeps only the expected keys
+ok 5 - M1 shapeTranslation keeps only the expected keys
+  ---
+  duration_ms: 0.163924
+  type: 'test'
+  ...
+# Subtest: extract fields: only allowed columns survive
+ok 6 - extract fields: only allowed columns survive
+  ---
+  duration_ms: 0.419518
+  type: 'test'
+  ...
+# Subtest: H7 Meta signature: valid accepted, tampered/missing rejected
+ok 7 - H7 Meta signature: valid accepted, tampered/missing rejected
+  ---
+  duration_ms: 8.995011
+  type: 'test'
+  ...
+# Subtest: H7 webhook payload parsing (text, audio, unknown type, missing id)
+ok 8 - H7 webhook payload parsing (text, audio, unknown type, missing id)
+  ---
+  duration_ms: 0.491826
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 161.294893

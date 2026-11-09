@@ -1,0 +1,51 @@
+# Runs on every push/PR of the hardening branch and main. Never touches production.
+name: CI
+on:
+  push:
+    branches: [main, "hardening/**"]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  database:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["54329:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 20
+    env: { PGPASSWORD: postgres, PGPORT: "54329" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Postgres 17 client (pg_dump must match the server version)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+      - name: Migrations + security/permission/multi-tenancy + performance tests
+        run: tests/run_db_tests.sh
+      - name: Every migration rolls back and re-applies
+        run: staging/test_rollback.sh
+      - name: Backup and restore are verifiable
+        run: |
+          createdb -h localhost -U postgres yaqen_restore
+          psql -h localhost -U postgres -d yaqen_restore -q -v ON_ERROR_STOP=1 -f scripts/prepare_restore_target.sql   # same preparation as the nightly drill
+          INCLUDE_AUTH=1 DATABASE_URL=postgres://postgres:postgres@localhost:54329/yaqen_staging BACKUP_PASSPHRASE=ci-only scripts/backup.sh /tmp/bk
+          CREATE_MISSING_ROLES=1 TARGET_URL=postgres://postgres:postgres@localhost:54329/yaqen_restore BACKUP_PASSPHRASE=ci-only scripts/restore.sh /tmp/bk/*.dump.gpg
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Edge-function logic unit tests
+        run: node --experimental-strip-types --test tests/functions/*.test.mjs
+      - name: UI tests (XSS, paging, approvals, soft delete, MFA) in Chrome
+        run: |
+          npm i --no-save playwright@1
+          node tests/e2e/run.mjs
+      - name: Demo build works (fictional data, no network)
+        run: node scripts/build_demo.mjs && node tests/e2e/demo_check.mjs

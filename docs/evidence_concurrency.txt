@@ -1,0 +1,55 @@
+# pgbench on local staging (Postgres 16, 2 vCPU sandbox VM, same machine as client). DB-only, not via the API/network. 2026-11-08T17:16:01Z
+=== 10 concurrent sessions, 30 s: 90% employees opening invoices/vehicles, 10% admin dashboard
+number of clients: 10
+number of transactions actually processed: 5065
+number of failed transactions: 0 (0.000%)
+latency average = 59.303 ms
+tps = 168.625985 (without initial connection time)
+SQL script 1: /home/claude/yaqen-manage/tests/load/employee_page.sql
+ - weight: 9 (targets 90.0% of total)
+ - 4567 transactions (90.2% of total, tps = 152.046372)
+ - number of failed transactions: 0 (0.000%)
+ - latency average = 47.770 ms
+ - latency stddev = 15.419 ms
+SQL script 2: /home/claude/yaqen-manage/tests/load/admin_dashboard.sql
+ - weight: 1 (targets 10.0% of total)
+ - 498 transactions (9.8% of total, tps = 16.579613)
+ - number of failed transactions: 0 (0.000%)
+ - latency average = 164.353 ms
+ - latency stddev = 29.192 ms
+=== 50 concurrent sessions, 30 s: 90% employees opening invoices/vehicles, 10% admin dashboard
+number of clients: 50
+number of transactions actually processed: 4804
+number of failed transactions: 0 (0.000%)
+latency average = 314.330 ms
+tps = 159.068729 (without initial connection time)
+SQL script 1: /home/claude/yaqen-manage/tests/load/employee_page.sql
+ - weight: 9 (targets 90.0% of total)
+ - 4317 transactions (89.9% of total, tps = 142.943318)
+ - number of failed transactions: 0 (0.000%)
+ - latency average = 253.545 ms
+ - latency stddev = 74.327 ms
+SQL script 2: /home/claude/yaqen-manage/tests/load/admin_dashboard.sql
+ - weight: 1 (targets 10.0% of total)
+ - 487 transactions (10.1% of total, tps = 16.125410)
+ - number of failed transactions: 0 (0.000%)
+ - latency average = 833.318 ms
+ - latency stddev = 124.983 ms
+=== 100 concurrent sessions, 30 s: 90% employees opening invoices/vehicles, 10% admin dashboard
+number of clients: 100
+number of transactions actually processed: 4918
+number of failed transactions: 0 (0.000%)
+latency average = 617.638 ms
+tps = 161.907077 (without initial connection time)
+SQL script 1: /home/claude/yaqen-manage/tests/load/employee_page.sql
+ - weight: 9 (targets 90.0% of total)
+ - 4417 transactions (89.8% of total, tps = 145.413493)
+ - number of failed transactions: 0 (0.000%)
+ - latency average = 513.882 ms
+ - latency stddev = 150.985 ms
+SQL script 2: /home/claude/yaqen-manage/tests/load/admin_dashboard.sql
+ - weight: 1 (targets 10.0% of total)
+ - 501 transactions (10.2% of total, tps = 16.493584)
+ - number of failed transactions: 0 (0.000%)
+ - latency average = 1423.483 ms
+ - latency stddev = 276.425 ms
