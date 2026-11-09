@@ -36,7 +36,7 @@ jobs:
           npm i --no-save playwright@1
           node tests/e2e/exec_report.mjs
           node tests/e2e/claude_page.mjs
-          node tests/e2e/consent_page.mjs
+          node tests/e2e/consent_page.mjs && node tests/e2e/consent_prod.mjs
       - name: Every migration rolls back and re-applies
         run: staging/test_rollback.sh
       - name: Backup and restore are verifiable

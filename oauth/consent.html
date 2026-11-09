@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- OAuth consent page for the Yaqen MCP connector — PRODUCTION project (Yaqen Manage).
+     Supabase Auth (OAuth 2.1 server) redirects here with ?authorization_id=...; the user signs in, sees which app asks for
+     READ-ONLY access, and approves or denies. Network is limited to the production project. Same flow as oauth/trial-consent.html. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; connect-src https://zalfumkzlnpygvemxayb.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>ربط Claude بيقين</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F6F5;--panel:#FFFFFF;--line:#E1E8E5;--text:#14211D;--muted:#66776F;--green:#11806A;--red:#D93A3A;--amber:#11806A}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;padding:16px}
+.card{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px}
+h1{font-size:20px;margin:0 0 6px}p{color:var(--muted);line-height:1.7;margin:6px 0}
+.tag{display:inline-block;background:rgba(17,128,106,.10);color:var(--amber);border-radius:999px;padding:2px 10px;font-size:12px;margin-bottom:10px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+input{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--text);font:inherit;direction:ltr;text-align:left}
+button{width:100%;padding:12px;border:0;border-radius:10px;font:inherit;font-weight:600;cursor:pointer;margin-top:14px}
+.ok{background:var(--green);color:#fff}.no{background:transparent;color:var(--text);border:1px solid var(--line)}
+ul{padding-inline-start:20px;color:var(--text);line-height:1.9;margin:8px 0}
+.err{color:var(--red);font-size:14px;min-height:20px;margin-top:10px}.who{font-size:13px;color:var(--muted)}
+.app{font-weight:700;color:var(--text)}
+</style>
+</head>
+<body>
+<main class="card" id="card"><p>جاري التحميل…</p></main>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const sb = createClient("https://zalfumkzlnpygvemxayb.supabase.co", "sb_publishable_IeygDMV4GdMRU4it2FfJ9A_WqP0Al09");
+const card = document.getElementById("card");
+const aid = new URLSearchParams(location.search).get("authorization_id");
+const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+const go = (url) => { if (/^https:\/\//.test(url || "")) location.assign(url); };
+const fail = (msg) => card.replaceChildren(el("span", { className: "tag", textContent: "يقين" }), el("h1", { textContent: "تعذر إكمال الربط" }), el("p", { textContent: msg }));
+
+async function start() {
+  if (!aid) return fail("الرابط ناقص. ابدأ الربط من Claude مرة ثانية.");
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return showLogin();
+  return showConsent(session);
+}
+
+function showLogin() {
+  const email = el("input", { type: "email", autocomplete: "username", required: true });
+  const pass = el("input", { type: "password", autocomplete: "current-password", required: true });
+  const err = el("div", { className: "err" });
+  const btn = el("button", { className: "ok", textContent: "تسجيل الدخول" });
+  btn.onclick = async () => {
+    err.textContent = ""; btn.disabled = true;
+    const { data, error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pass.value });
+    btn.disabled = false;
+    if (error || !data.session) { err.textContent = "البريد أو كلمة المرور غير صحيحة."; return; }
+    showConsent(data.session);
+  };
+  card.replaceChildren(el("span", { className: "tag", textContent: "يقين · ربط Claude" }),
+    el("h1", { textContent: "سجّل دخولك في يقين" }), el("p", { textContent: "لربط Claude بحسابك. كلمة المرور تُرسل ليقين فقط، ولا يراها Claude." }),
+    el("label", { textContent: "البريد الإلكتروني" }), email, el("label", { textContent: "كلمة المرور" }), pass, btn, err);
+}
+
+async function showConsent(session) {
+  const { data, error } = await sb.auth.oauth.getAuthorizationDetails(aid, { skipBrowserRedirect: true });
+  if (error) return fail("طلب الربط غير صالح أو انتهت صلاحيته. ابدأ من Claude مرة ثانية.");
+  const redirect = data?.redirect_url || data?.redirect_to;
+  if (!data?.authorization_id && redirect) return go(redirect);        // already approved before
+  const appName = data?.client?.name || data?.client?.client_name || "تطبيق ذكاء اصطناعي";
+  const err = el("div", { className: "err" });
+  const approve = el("button", { className: "ok", textContent: "موافقة (قراءة فقط)" });
+  const deny = el("button", { className: "no", textContent: "رفض" });
+  const decide = async (yes) => {
+    approve.disabled = deny.disabled = true;
+    const r = yes ? await sb.auth.oauth.approveAuthorization(aid, { skipBrowserRedirect: true })
+                  : await sb.auth.oauth.denyAuthorization(aid, { skipBrowserRedirect: true });
+    const to = r.data?.redirect_url || r.data?.redirect_to;
+    if (r.error || !to) { approve.disabled = deny.disabled = false; err.textContent = "تعذر إرسال القرار. حاول مرة ثانية."; return; }
+    go(to);
+  };
+  approve.onclick = () => decide(true); deny.onclick = () => decide(false);
+  const signOut = el("a", { href: "#", textContent: "ليس أنت؟ سجّل الخروج", className: "who" });
+  signOut.onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); showLogin(); };
+  card.replaceChildren(el("span", { className: "tag", textContent: "يقين · ربط Claude" }),
+    el("h1", {}, el("span", { className: "app", textContent: appName }), " يطلب الوصول لبيانات شركتك"),
+    el("p", { className: "who", textContent: "الحساب: " + (session.user?.email || "") }),
+    el("ul", {}, el("li", { textContent: "قراءة فقط: لا يستطيع الإضافة أو التعديل أو الحذف." }),
+                 el("li", { textContent: "يرى فقط ما تسمح به صلاحياتك في يقين." }),
+                 el("li", { textContent: "مدير شركتك يقدر يحدد وش يقرأ Claude أو يلغي الربط من صفحة «الربط مع Claude» في يقين." })),
+    approve, deny, err, el("p", {}, signOut));
+}
+start().catch(() => fail("حدث خطأ غير متوقع. حاول مرة ثانية."));
+</script>
+</body>
+</html>

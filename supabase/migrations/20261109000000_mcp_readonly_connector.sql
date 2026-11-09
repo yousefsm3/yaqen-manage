@@ -35,23 +35,25 @@ do $$ begin
 end $$;
 
 -- (b) restrictive policies: no insert/update/delete with an OAuth token, whatever the permissive policies allow.
-do $$ declare t text; begin
+do $$ declare t text; op text; begin
   foreach t in array array['companies','departments','profiles','projects','invoices','vehicles','documents','legal_cases','requests',
                            'manager_notes','rooms','room_members','room_messages','notifications'] loop
-    execute format('drop policy if exists oauth_no_insert on public.%I', t);
-    execute format('drop policy if exists oauth_no_update on public.%I', t);
-    execute format('drop policy if exists oauth_no_delete on public.%I', t);
-    execute format('create policy oauth_no_insert on public.%I as restrictive for insert to authenticated with check (not (select public.is_oauth_request()))', t);
-    execute format('create policy oauth_no_update on public.%I as restrictive for update to authenticated using (not (select public.is_oauth_request())) with check (not (select public.is_oauth_request()))', t);
-    execute format('create policy oauth_no_delete on public.%I as restrictive for delete to authenticated using (not (select public.is_oauth_request()))', t);
+    foreach op in array array['insert','update','delete'] loop
+      if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and policyname = 'oauth_no_' || op) then
+        execute case op
+          when 'insert' then format('create policy oauth_no_insert on public.%I as restrictive for insert to authenticated with check (not (select public.is_oauth_request()))', t)
+          when 'update' then format('create policy oauth_no_update on public.%I as restrictive for update to authenticated using (not (select public.is_oauth_request())) with check (not (select public.is_oauth_request()))', t)
+          else format('create policy oauth_no_delete on public.%I as restrictive for delete to authenticated using (not (select public.is_oauth_request()))', t) end;
+      end if;
+    end loop;
   end loop;
+  if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'oauth_no_insert') then
+    create policy oauth_no_insert on storage.objects as restrictive for insert to authenticated with check (not (select public.is_oauth_request())); end if;
+  if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'oauth_no_update') then
+    create policy oauth_no_update on storage.objects as restrictive for update to authenticated using (not (select public.is_oauth_request())); end if;
+  if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'oauth_no_delete') then
+    create policy oauth_no_delete on storage.objects as restrictive for delete to authenticated using (not (select public.is_oauth_request())); end if;
 end $$;
-drop policy if exists oauth_no_insert on storage.objects;
-drop policy if exists oauth_no_update on storage.objects;
-drop policy if exists oauth_no_delete on storage.objects;
-create policy oauth_no_insert on storage.objects as restrictive for insert to authenticated with check (not (select public.is_oauth_request()));
-create policy oauth_no_update on storage.objects as restrictive for update to authenticated using (not (select public.is_oauth_request()));
-create policy oauth_no_delete on storage.objects as restrictive for delete to authenticated using (not (select public.is_oauth_request()));
 
 -- (c) the hook must actually be installed; tools refuse to run otherwise (a forgotten deploy step fails closed)
 create or replace function public.mcp_selfcheck() returns boolean language sql stable security definer set search_path = '' as $$
@@ -100,9 +102,9 @@ create index if not exists mcp_usage_company_at on public.mcp_usage (company_id,
 alter table public.mcp_usage enable row level security;
 revoke all on public.mcp_usage from anon, authenticated;
 grant select on public.mcp_usage to authenticated;
-drop policy if exists mcp_usage_admin_read on public.mcp_usage;
-create policy mcp_usage_admin_read on public.mcp_usage for select to authenticated
-  using (company_id = (select public.my_company()) and (select public.is_company_admin()));
+do $$ begin if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'mcp_usage' and policyname = 'mcp_usage_admin_read') then
+  create policy mcp_usage_admin_read on public.mcp_usage for select to authenticated
+    using (company_id = (select public.my_company()) and (select public.is_company_admin())); end if; end $$;
 
 create or replace function public.mcp_begin(p_user uuid, p_tool text) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_cid uuid; v_min int; v_day int; v_id bigint;

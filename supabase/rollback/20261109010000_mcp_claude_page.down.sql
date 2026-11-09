@@ -3,6 +3,7 @@ drop function if exists public.claude_page();
 drop function if exists public.claude_save_settings(boolean, text[], int);
 drop function if exists public.claude_revoke(uuid);
 drop function if exists public.mcp_guard(text);
+grant execute on function public.mcp_guard() to authenticated;
 drop function if exists public.mcp_scope_ok(text);
 drop function if exists public.mcp_last_active(uuid, uuid);
 drop function if exists public.mcp_effective(uuid);

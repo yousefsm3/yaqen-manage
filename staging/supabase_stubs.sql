@@ -32,6 +32,12 @@ create table if not exists auth.sessions (
   oauth_client_id uuid,
   scopes text
 );
+-- mirrors the columns of the real auth.refresh_tokens used when a Claude connection is revoked
+create table if not exists auth.refresh_tokens (
+  id bigserial primary key,
+  session_id uuid,
+  revoked boolean default false
+);
 -- mirrors auth.oauth_clients (Supabase OAuth 2.1 server): the Claude page reads the client name
 create table if not exists auth.oauth_clients (
   id uuid primary key default gen_random_uuid(),

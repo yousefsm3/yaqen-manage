@@ -79,9 +79,11 @@ select qa.expect_blocked('CLAUDE-P','manager B cannot revoke A''s connection',
   pg_temp.w(:B1, $$select public.claude_revoke('00000000-0000-0000-5e55-00000000c0a1')::text$$));
 select qa.expect_blocked('CLAUDE-P','a normal web session cannot be revoked through this function',
   pg_temp.w(:A1, $$select public.claude_revoke('00000000-0000-0000-5e55-0000000000a2')::text$$));
+insert into auth.refresh_tokens (session_id) values ('00000000-0000-0000-5e55-00000000c0a1'), ('00000000-0000-0000-5e55-00000000c0b1');
 select qa.expect('CLAUDE-P','manager A revokes A''s connection', pg_temp.w(:A1, $$select public.claude_revoke('00000000-0000-0000-5e55-00000000c0a1')::text$$), '');
 select qa.expect_true('CLAUDE-P','after revoke: tool refused at once (SESSION_REVOKED)',
   pg_temp.o(:A1, $$select public.mcp_projects()::text$$) like '%MCP:SESSION_REVOKED%');
 select qa.expect('CLAUDE-P','after revoke: list is empty',
   (select jsonb_array_length(j->'connections')::text from (select pg_temp.w(:A1, $$select public.claude_page()::text$$)::jsonb j) x), '0');
+select qa.expect('CLAUDE-P','after revoke: its refresh tokens are revoked, B''s are not', (select string_agg(revoked::text, ',' order by session_id) from auth.refresh_tokens where session_id in ('00000000-0000-0000-5e55-00000000c0a1','00000000-0000-0000-5e55-00000000c0b1')), 'true,false');
 select qa.expect_true('CLAUDE-P','B''s connection untouched', exists (select 1 from auth.sessions where id = '00000000-0000-0000-5e55-00000000c0b1'));

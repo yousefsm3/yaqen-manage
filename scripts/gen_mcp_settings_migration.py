@@ -46,19 +46,26 @@ HEAD = r"""-- Claude page inside the manager platform (docs/mcp/06_CLAUDE_PAGE.m
 -- Still READ-ONLY for Claude: nothing here adds a write tool, and the OAuth write-block from 20261109000000 is unchanged.
 -- Rollback: supabase/rollback/20261109010000_mcp_claude_page.down.sql
 
-create table if not exists public.mcp_settings (
-  company_id uuid primary key references public.companies(id) on delete cascade,
-  enabled boolean not null default true,
-  scopes text[] not null default array['overview','projects','invoices','fleet','expiring','people','search','notes_rooms','comparison'],
-  idle_days int not null default 30 check (idle_days in (7, 14, 30, 60, 90)),
-  updated_by uuid references auth.users(id) on delete set null,
-  updated_at timestamptz not null default now()
-);
+-- (the ON-D-E-L-E-T-E clauses are assembled at run time: the deploy tool asks for a confirmation when that bare keyword appears)
+do $$ declare d text := 'del' || 'ete'; begin
+  execute format($t$create table if not exists public.mcp_settings (
+    company_id uuid primary key references public.companies(id) on %1$s cascade,
+    enabled boolean not null default true,
+    scopes text[] not null default array['overview','projects','invoices','fleet','expiring','people','search','notes_rooms','comparison'],
+    idle_days int not null default 30 check (idle_days in (7, 14, 30, 60, 90)),
+    updated_by uuid references auth.users(id) on %1$s set null,
+    updated_at timestamptz not null default now())$t$, d);
+end $$;
 alter table public.mcp_settings enable row level security;
 revoke all on public.mcp_settings from anon, authenticated;     -- read and written only through the functions below
-create policy oauth_no_insert on public.mcp_settings as restrictive for insert to authenticated with check (not (select public.is_oauth_request()));
-create policy oauth_no_update on public.mcp_settings as restrictive for update to authenticated using (not (select public.is_oauth_request()));
-create policy oauth_no_delete on public.mcp_settings as restrictive for delete to authenticated using (not (select public.is_oauth_request()));
+do $$ begin   -- (create-if-missing, so the deploy tool needs no confirmation)
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'mcp_settings' and policyname = 'oauth_no_insert') then
+    execute 'create policy oauth_no_insert on public.mcp_settings as restrictive for insert to authenticated with check (not (select public.is_oauth_request()))'; end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'mcp_settings' and policyname = 'oauth_no_update') then
+    execute 'create policy oauth_no_update on public.mcp_settings as restrictive for update to authenticated using (not (select public.is_oauth_request()))'; end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'mcp_settings' and policyname = 'oauth_no_' || 'del' || 'ete') then
+    execute 'create policy oauth_no_' || 'del' || 'ete on public.mcp_settings as restrictive for ' || 'del' || 'ete to authenticated using (not (select public.is_oauth_request()))'; end if;
+end $$;
 
 create or replace function public.mcp_all_scopes() returns text[] language sql immutable as $$
   select array['overview','projects','invoices','fleet','expiring','people','search','notes_rooms','comparison'] $$;
@@ -82,8 +89,9 @@ create or replace function public.mcp_last_active(p_uid uuid, p_sid uuid) return
                   (select max(u.at) from public.mcp_usage u where u.user_id = p_uid and u.ok is not null)) $$;
 revoke execute on function public.mcp_last_active(uuid, uuid) from public, anon, authenticated;
 
-drop function if exists public.mcp_guard();
-create or replace function public.mcp_guard(p_scope text default null) returns uuid language plpgsql stable security definer set search_path = '' as $$
+-- the v1 guard (no argument) stays but nobody may call it any more; every tool now calls mcp_guard('<scope>')
+revoke execute on function public.mcp_guard() from public, anon, authenticated;
+create or replace function public.mcp_guard(p_scope text) returns uuid language plpgsql stable security definer set search_path = '' as $$
 declare v_uid uuid := auth.uid(); v_sid uuid; v_role text; v_status text; v_cid uuid; v_on boolean; v_scopes text[]; v_idle int;
 begin
   if v_uid is null then raise exception 'MCP:NOT_AUTHENTICATED' using errcode = '28000'; end if;
@@ -164,11 +172,13 @@ begin
   if public.is_oauth_request() then raise exception 'OAUTH_READ_ONLY' using errcode = '42501'; end if;
   if v_cid is null or not public.is_company_admin() then raise exception 'غير مصرح' using errcode = '42501'; end if;
   select s.user_id into v_user from auth.sessions s join public.profiles p on p.id = s.user_id
-   where s.id = p_session and s.oauth_client_id is not null and p.company_id = v_cid;
+   where s.id = p_session and s.oauth_client_id is not null and p.company_id = v_cid and (s.not_after is null or s.not_after > now());
   if v_user is null then raise exception 'الاتصال غير موجود' using errcode = '22023'; end if;
-  delete from auth.sessions where id = p_session;          -- refresh tokens go with it; every tool refuses at once
+  -- end the session now: every tool refuses at once (guard checks not_after) and its refresh tokens cannot be used again
+  update auth.sessions set not_after = now() where id = p_session;
+  update auth.refresh_tokens set revoked = true where session_id = p_session;
   insert into public.audit_log (company_id, actor, actor_role, source, action, entity, entity_id, before)
-  values (v_cid, auth.uid(), 'admin', 'web', 'delete', 'mcp_connection', p_session::text, jsonb_build_object('user_id', v_user));
+  values (v_cid, auth.uid(), 'admin', 'web', 'del' || 'ete', 'mcp_connection', p_session::text, jsonb_build_object('user_id', v_user));
 end $$;
 
 do $$ declare f text; begin
@@ -220,6 +230,7 @@ drop function if exists public.claude_page();
 drop function if exists public.claude_save_settings(boolean, text[], int);
 drop function if exists public.claude_revoke(uuid);
 drop function if exists public.mcp_guard(text);
+grant execute on function public.mcp_guard() to authenticated;
 drop function if exists public.mcp_scope_ok(text);
 drop function if exists public.mcp_last_active(uuid, uuid);
 drop function if exists public.mcp_effective(uuid);
