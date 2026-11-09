@@ -103,3 +103,13 @@ insert into documents(name, company_id, expiry_date) values ('Aramco qualificati
 do $$ begin if qa.has_function('generate_notifications') then perform public.generate_notifications(); end if; end $$;
 select qa.check_sql('H6','expiring document creates a notification for company admins', $$select exists(select 1 from notifications where company_id='00000000-0000-0000-0000-0000000000a0' and user_id='00000000-0000-0000-0000-0000000000a1' and body like '%Aramco qualification%')$$);
 select qa.expect_true('H6','notifications exist and are private to their user', qa.has_table('notifications') and qa.run(:A2, $$select count(*)::text from notifications where user_id='00000000-0000-0000-0000-0000000000a1'$$) = '0', '');
+
+-- ---------- found in the production rollout: a company admin must not raise the AI budget / limits ----------
+select qa.run('00000000-0000-0000-0000-0000000000a1',
+  $$with u as (update companies set ai_monthly_budget_usd = 999999, ai_daily_user_limit = 999999, deleted_at = now()
+               where id='00000000-0000-0000-0000-0000000000a0' returning 1) select count(*)::text from u$$);
+select qa.check_sql('H4','company admin cannot raise AI budget, daily limit or set deleted_at on own company',
+  $$select ai_monthly_budget_usd < 999999 and ai_daily_user_limit < 999999 and deleted_at is null from companies where id='00000000-0000-0000-0000-0000000000a0'$$);
+select qa.check_sql('H4','platform owner can still change the AI budget',
+  $$select (select qa.run('00000000-0000-0000-0000-0000000000f0', $q$with u as (update companies set ai_monthly_budget_usd = 45 where id='00000000-0000-0000-0000-0000000000a0' returning ai_monthly_budget_usd) select max(ai_monthly_budget_usd)::text from u$q$)) = '45'$$);
+update companies set ai_monthly_budget_usd = 30 where id='00000000-0000-0000-0000-0000000000a0';
