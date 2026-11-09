@@ -63,28 +63,31 @@ const invoices = JSON.parse(asA1(`select coalesce(json_agg(i), '[]')::text from 
   const c = (await calls()).find((x) => x.rpc === "report_profit_comparison");
   ok("prompt resolved to Nov 2026 vs Oct 2026", c && c.args.a_from === "2026-11-01" && c.args.a_to === "2026-11-30" && c.args.b_from === "2026-10-01" && c.args.b_to === "2026-10-31", JSON.stringify(c?.args));
   const txt = await page.textContent("#reportView");
-  const fmt = (v) => page.evaluate((v) => Number(v).toLocaleString("ar-SA", { maximumFractionDigits:0 }), v);
+  const fmt = (v) => page.evaluate((v) => Number(v).toLocaleString("ar-SA-u-nu-latn", { maximumFractionDigits:0 }), v);
   ok("revenue figure = DB (" + report.periods.a.revenue_invoiced + ")", txt.includes(await fmt(report.periods.a.revenue_invoiced)));
   ok("supplier figure = DB (" + report.periods.a.supplier_invoiced + ")", txt.includes(await fmt(report.periods.a.supplier_invoiced)));
-  ok("change % = DB (" + report.change.revenue_invoiced.pct + "%)", txt.includes((25).toLocaleString("ar-SA") + "%"));
+  ok("change % = DB (" + report.change.revenue_invoiced.pct + "%)", txt.includes((25).toLocaleString("ar-SA-u-nu-latn") + "%"));
   ok("net profit stated as NOT available with reasons", txt.includes("صافي الربح: غير متاح") && txt.includes("لا يوجد في يقين دفتر مصروفات"));
   ok("partial current month is flagged", txt.includes("الشهر الحالي لم يكتمل"));
-  ok("excluded invoices without due date are disclosed (" + report.excluded_no_due_date + ")", txt.includes("بدون تاريخ استحقاق") && txt.includes(await page.evaluate((v) => Number(v).toLocaleString("ar-SA"), report.excluded_no_due_date)));
+  ok("excluded invoices without due date are disclosed (" + report.excluded_no_due_date + ")", txt.includes("بدون تاريخ استحقاق") && txt.includes(await page.evaluate((v) => Number(v).toLocaleString("ar-SA-u-nu-latn"), report.excluded_no_due_date)));
   ok("calculation time and data basis shown", txt.includes("وقت الحساب") && txt.includes("حسب تاريخ استحقاق"));
-  ok("chart drawn from the same figures", await page.locator("#reportView svg rect").count() >= 8);
+  const bars = await page.$$eval("#reportView .hb .trk i", (els) => els.map((e) => parseFloat(e.style.width)));
+  const exp = ["revenue_invoiced", "supplier_invoiced", "collected", "outstanding"].flatMap((k) => [Number(report.periods.a[k]) || 0, Number(report.periods.b[k]) || 0]);
+  const mx = Math.max(1, ...exp);
+  ok("chart drawn from the same figures (8 bars, widths = DB values / max)", bars.length === 8 && bars.every((w, i) => Math.abs(w - (exp[i] / mx) * 100) < 0.01), JSON.stringify(bars));
   // drill-down: rows behind "revenue" add up to the figure
   await page.click("#kpiTable tr:nth-child(2)"); await page.waitForTimeout(400);
   const drillTxt = await page.textContent("#drill");
   const rows = await page.locator("#drill table tr").count() - 1;
   ok("drill-down lists the invoices behind the revenue figure (2)", rows === report.periods.a.revenue_count, `${rows} rows`);
-  ok("drill-down total equals the revenue figure", drillTxt.includes("المجموع " + (await page.evaluate((v) => (Number(v)).toLocaleString("ar-SA", { maximumFractionDigits:0 }), report.periods.a.revenue_invoiced))));
+  ok("drill-down total equals the revenue figure", drillTxt.includes("المجموع " + (await page.evaluate((v) => (Number(v)).toLocaleString("ar-SA-u-nu-latn", { maximumFractionDigits:0 }), report.periods.a.revenue_invoiced))));
   const q = (await calls()).filter((x) => x.t === "invoices").pop();
   ok("drill uses the same filters as the database figure", JSON.stringify(q.filters).includes('"gte","due_date","2026-11-01"') && JSON.stringify(q.filters).includes('"lte","due_date","2026-11-30"') && JSON.stringify(q.filters).includes('"eq","kind","صادرة"'));
   await page.click("#kpiTable tr:nth-child(5)"); await page.waitForTimeout(400);
   ok("drill 'collected' = paid only", (await page.locator("#drill table tr").count() - 1) === 1 && (await page.textContent("#drill")).includes("N-1"));
   ok("no JS errors", errors.length === 0, errors.join(" / "));
   await page.emulateMedia({ media:"print" });
-  ok("print view hides navigation and buttons", !(await page.locator(".side").isVisible()) && !(await page.locator("text=🖨️ طباعة").isVisible()));
+  ok("print view hides navigation and buttons", !(await page.locator(".side").isVisible()) && !(await page.locator("button:has-text(\"طباعة\")").isVisible()));
   await ctx.close();
 }
 // 3) user with no invoices in scope: empty state, no invented numbers
