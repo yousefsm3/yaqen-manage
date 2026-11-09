@@ -1,0 +1,35 @@
+# MCP end-to-end tests (core + harness + staging DB), 2026-11-08T23:00:30Z
+ok 1 - A1 no token -> 401 with WWW-Authenticate pointing to resource metadata
+ok 2 - A2 protected resource metadata names Supabase Auth as authorization server
+ok 3 - A3 initialize negotiates protocol version and declares tools capability
+ok 4 - A4 tools/list: 10 tools, all read-only, closed schemas, no identity inputs
+ok 5 - A5 transport edge cases
+ok 6 - A6 input validation rejects bad arguments before touching the database
+ok 7 - B1 valid token works end to end
+ok 8 - B2 expired / forged / alg=none tokens -> 401
+ok 9 - B3 revoked session -> tool refused immediately (token still cryptographically valid)
+ok 10 - B4 pending account, platform admin, anonymous-role token
+ok 11 - C1 each company sees only itself
+ok 12 - C2 identity tampering in arguments is rejected
+ok 13 - C3 department scope: fleet employee sees no finance data, finance employee does
+ok 14 - C4 cross-company probing by id or search returns nothing
+ok 15 - D1 period comparison equals hand-computed and direct SQL values
+ok 16 - D2 invoice totals and aging equal direct SQL
+ok 17 - D3 pagination walks every row exactly once
+ok 18 - D4 missing data is reported, never invented
+ok 19 - E1 prompt-injection text travels only as data inside structured JSON
+ok 20 - E2 upstream errors never leak database details; tokens never reach the error log
+ok 21 - E3 the OAuth token cannot write through the same database path (hook + read-only tx)
+ok 22 - E4 rate limit: 31st call in a minute is refused, and logged
+ok 23 - E5 usage log stores no arguments or tokens
+# PERF yaqen_company_overview: 145 ms | yaqen_invoices: 96 ms | yaqen_fleet: 88 ms | yaqen_expiring: 98 ms | yaqen_search: 88 ms | yaqen_invoice_period_comparison: 98 ms | 20 concurrent yaqen_invoices: 1025 ms total
+ok 24 - F1 latency per tool and 20 concurrent calls
+# tests 24
+# pass 24
+# fail 0
+
+# Mutation checks (protection deliberately removed -> tests must fail)
+M1 mcp_invoices made SECURITY DEFINER: C3 (department scope) FAILED as expected; C1 still passed because each tool also filters company_id = guard result (second layer)
+M2 session check removed from mcp_guard: B3 and C2 FAILED as expected
+M3 pre_request emptied + oauth_no_update dropped on vehicles: E3 FAILED as expected
+After restore: DB 174/174, MCP 24/24

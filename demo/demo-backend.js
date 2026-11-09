@@ -142,6 +142,8 @@ function createClient() {
     eq(k, v) { this.f.push((r) => r[k] === v); return this; }
     neq(k, v) { this.f.push((r) => r[k] !== v); return this; }
     in(k, v) { this.f.push((r) => v.includes(r[k])); return this; }
+    gte(k, v) { this.f.push((r) => r[k] != null && r[k] >= v); return this; }
+    lte(k, v) { this.f.push((r) => r[k] != null && r[k] <= v); return this; }
     is(k, v) { this.f.push((r) => (r[k] ?? null) === v); return this; }
     or(expr) { const parts = expr.split(","); this.f.push((r) => parts.some((pt) => { const [c, , pat] = pt.split("."); return String(r[c] ?? "").toLowerCase().includes(pat.replace(/^\*|\*$/g, "").toLowerCase()); })); return this; }
     order(k, o) { if (!this.desc) this.desc = [k, o?.ascending === false]; return this; }
@@ -249,6 +251,29 @@ function createClient() {
     invite_platform_admin: () => null,
     admin_delete_user: ({ target }) => { DB.profiles = DB.profiles.filter((p) => p.id !== target); },
     log_client_error: () => null,
+    // same rules as public.report_profit_comparison (due-date basis, net profit not available), on the fake data
+    report_profit_comparison: ({ a_from, a_to, b_from, b_to }) => {
+      const cid = myCo(); const inv = rows("invoices").filter((i) => i.company_id === cid);
+      const per = (f, t) => { const r = inv.filter((i) => i.due_date && i.due_date >= f && i.due_date <= t);
+        const sum = (xs) => xs.reduce((s, i) => s + Number(i.amount), 0);
+        const rev = r.filter((i) => i.kind === "صادرة"), sup = r.filter((i) => i.kind === "واردة");
+        const parties = Object.entries(rev.reduce((m, i) => ((m[i.party] = m[i.party] || { amount:0, count:0 }), (m[i.party].amount += Number(i.amount)), m[i.party].count++, m), {}))
+          .map(([party, v]) => ({ party, ...v })).sort((x, y) => y.amount - x.amount).slice(0, 5);
+        const deps = Object.values(r.reduce((m, i) => { const d = DB.departments.find((x) => x.id === i.department_id)?.name ?? null;
+          (m[d] = m[d] || { department:d, revenue:0, supplier:0 })[i.kind === "صادرة" ? "revenue" : "supplier"] += Number(i.amount); return m; }, {}));
+        return { from:f, to:t, revenue_invoiced:sum(rev), supplier_invoiced:sum(sup), net_invoiced:sum(rev) - sum(sup), revenue_count:rev.length, supplier_count:sup.length,
+          collected:sum(rev.filter((i) => i.status === "مدفوعة")), outstanding:sum(rev.filter((i) => i.status !== "مدفوعة")), supplier_paid:sum(sup.filter((i) => i.status === "مدفوعة")),
+          top_clients:parties, by_department:deps };
+      };
+      const A = per(a_from, a_to), B = per(b_from, b_to);
+      const change = Object.fromEntries(["revenue_invoiced","supplier_invoiced","net_invoiced","collected","outstanding"].map((k) =>
+        [k, { abs:A[k] - B[k], pct:B[k] === 0 ? null : Math.round(((A[k] - B[k]) / Math.abs(B[k])) * 1000) / 10 }]));
+      return { report:"profit_comparison", as_of:new Date().toISOString(), data_last_updated:inv.map((i) => i.updated_at).sort().pop() ?? null,
+        basis:"invoice_due_date", basis_ar:"حسب تاريخ استحقاق الفواتير المسجلة في يقين", currency:"SAR", periods:{ a:A, b:B }, change,
+        excluded_no_due_date:inv.filter((i) => !i.due_date).length,
+        net_profit:{ available:false, reasons_ar:["لا يوجد في يقين دفتر مصروفات ولا رواتب ولا تكاليف مشاريع.", "الفواتير بدون تاريخ إصدار، فتُنسب للفترة حسب تاريخ الاستحقاق فقط.", "الفواتير غير مربوطة بالمشاريع، فلا يمكن حساب ربحية مشروع."],
+          shown_instead_ar:"الفرق بين الفواتير الصادرة والواردة المستحقة في الفترة (صافي الفوترة)، وهو ليس ربحاً محاسبياً." } };
+    },
   };
 
   // AI: NOT active in the demo. Answers are computed from the fake data and clearly labelled as examples.

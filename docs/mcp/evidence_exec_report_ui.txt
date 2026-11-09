@@ -1,0 +1,22 @@
+PASS | periods: January compares with previous December | {"a":{"from":"2026-01-01","to":"2026-01-31","partial":true},"b":{"from":"2025-12-01","to":"2025-12-31"}}
+PASS | periods: 'last vs before' on Mar 31 = Feb vs Jan | {"a":{"from":"2026-02-01","to":"2026-02-28"},"b":{"from":"2026-01-01","to":"2026-01-31"}}
+PASS | periods: leap year February has 29 days | {"a":{"from":"2028-03-01","to":"2028-03-31","partial":true},"b":{"from":"2028-02-01","to":"2028-02-29"}}
+PASS | Riyadh date used (23:30 UTC on Nov 30 is already Dec 1 in Riyadh) | 2026-12-01
+PASS | 4 prompts without data are shown disabled with a reason | 4
+PASS | prompt resolved to Nov 2026 vs Oct 2026 | {"a_from":"2026-11-01","a_to":"2026-11-30","b_from":"2026-10-01","b_to":"2026-10-31"}
+PASS | revenue figure = DB (150000)
+PASS | supplier figure = DB (40000)
+PASS | change % = DB (25%)
+PASS | net profit stated as NOT available with reasons
+PASS | partial current month is flagged
+PASS | excluded invoices without due date are disclosed (4)
+PASS | calculation time and data basis shown
+PASS | chart drawn from the same figures
+PASS | drill-down lists the invoices behind the revenue figure (2) | 2 rows
+PASS | drill-down total equals the revenue figure
+PASS | drill uses the same filters as the database figure
+PASS | drill 'collected' = paid only
+PASS | no JS errors
+PASS | print view hides navigation and buttons
+PASS | fleet employee: 'no invoices within your permissions' and percent shown as —
+---- 21 passed, 0 failed of 21

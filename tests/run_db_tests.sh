@@ -12,7 +12,10 @@ $PG -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/00_lib.sql" >/dev/null
 $PG -v ON_ERROR_STOP=1 -f "$ROOT/tests/db/01_fixture.sql" >/dev/null || { echo "FIXTURE FAILED"; exit 2; }
 $PG -f "$ROOT/tests/db/10_security.sql" >/dev/null 2>"$ROOT/.test_errors.log"
 $PG -f "$ROOT/tests/db/11_new_functions.sql" >/dev/null 2>>"$ROOT/.test_errors.log"
+$PG -f "$ROOT/tests/db/30_mcp.sql" >/dev/null 2>>"$ROOT/.test_errors.log"
+$PG -f "$ROOT/tests/db/32_claude_page.sql" >/dev/null 2>>"$ROOT/.test_errors.log"
 [ -z "${NOPERF:-}" ] && $PG -f "$ROOT/tests/db/20_perf.sql" >/dev/null 2>>"$ROOT/.test_errors.log"
+[ -z "${NOPERF:-}" ] && $PG -f "$ROOT/tests/db/31_mcp_perf.sql" >/dev/null 2>>"$ROOT/.test_errors.log"
 $PG -A -F ' | ' -t -c "select case when ok then 'PASS' else 'FAIL' end, issue, name, left(detail, 110) from qa.results order by issue, n"
 $PG -A -t -c "select '---- ' || count(*) filter (where ok) || ' passed, ' || count(*) filter (where not ok) || ' failed of ' || count(*) from qa.results"
 fails=$($PG -A -t -c "select count(*) from qa.results where not ok")

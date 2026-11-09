@@ -1,0 +1,204 @@
+PASS | C1 | PERF invoices: full list 20,000 rows (report query) | 7.4 ms
+PASS | C1 | PERF invoices: page 1 (50 rows) | 0.5 ms
+PASS | C1 | PERF invoices: page 200 (offset 9,950) | 14.4 ms
+PASS | C1 | PERF invoices: server search "INV-1999" | 8.6 ms
+PASS | C1 | PERF invoices: exact count for pager | 4.1 ms
+PASS | C1 | PERF finance employee: invoices page 1 | 0.6 ms
+PASS | C1 | PERF fleet employee: invoices (correct answer 0 rows) | 8.4 ms
+PASS | C3 | employee who picked Finance at sign-up reads finance invoice | 0
+PASS | C3 | employee who picked a department at sign-up has no department until admin assigns | none
+PASS | C3 | new join-code sign-up is pending admin approval | 
+PASS | C3 | pending employee sees own company data | 0
+PASS | C3 | admin code is single-use (rotated after the admin signed up) | admin_code still the original
+PASS | C3 | lookup_company refuses after 30 failed guesses from one IP | still answering after 30 failures
+PASS | C3 | lookup_company still works for a normal user from another IP | 
+PASS | C3 | lookup_company does not reveal department ids to anonymous callers | 
+PASS | C3 | employee cannot approve a pending member | 
+PASS | C3 | admin of another company cannot approve | 
+PASS | C3 | admin cannot assign a department of another company | 
+PASS | C3 | after approval into Projects the member is active in Projects | active/المشاريع
+PASS | C3 | approved Projects member still cannot read finance invoices | 0
+PASS | C3 | approval is in the audit log with the approving admin | 
+PASS | C3 | disabled member sees nothing | 0
+PASS | C3 | admin cannot disable themself | 
+PASS | C3 | member-facing my_account() works while pending/disabled | 
+PASS | H2 | admin dashboard_stats counts all company vehicles | 2
+PASS | H2 | fleet employee dashboard does not reveal receivables of finance | 0
+PASS | H2 | other company admin gets zeros for company A | 0/0
+PASS | H2 | company_alerts returns the expiring document | 
+PASS | H2 | PERF dashboard: overdue invoices sum | 3.6 ms
+PASS | H2 | PERF vehicles: page 1 | 0.5 ms
+PASS | H2 | PERF vehicles: full list 3,000 | 1.3 ms
+PASS | H2 | PERF employees: page 1 | 0.5 ms
+PASS | H2 | PERF employees: full list 1,500 | 1.3 ms
+PASS | H2 | PERF dashboard: dashboard_stats() RPC | 13.6 ms
+PASS | H3 | created_by cannot be spoofed on insert | 00000000-0000-0000-0000-0000000000a2
+PASS | H3 | audit log records the insert with the real actor | 
+PASS | H3 | audit log records the update with before/after | 
+PASS | H3 | company admin cannot edit the audit log | 
+PASS | H3 | company admin cannot delete the audit log | 
+PASS | H3 | company admin sees only own company audit rows | 0
+PASS | H3 | company admin sees own company audit rows | 
+PASS | H4 | AI usage is metered per company with a limit check | 
+PASS | H4 | ai_company_context returns totals + alerts in one call | 
+PASS | H4 | authenticated users cannot write AI usage records | 
+PASS | H4 | quota ok for a fresh company | 
+PASS | H4 | quota refuses after the monthly budget is spent | MONTHLY_BUDGET
+PASS | H4 | quota refuses a user after the daily request limit | DAILY_USER_LIMIT
+PASS | H4 | employee cannot read company AI spend | 0
+PASS | H6 | expiring document creates a notification for company admins | 
+PASS | H6 | notifications exist and are private to their user | 
+PASS | H6 | notifications are idempotent (second run adds nothing) | 
+PASS | H6 | user can mark own notification read | 
+PASS | H6 | user cannot rewrite notification text | 
+PASS | H7 | WhatsApp sender matched by phone (local 05 format vs 9665) | 00000000-0000-0000-0000-0000000000a2
+PASS | H7 | sender matching is not callable from the browser | 
+PASS | H7 | queued WhatsApp messages visible to company admin only | 1/0/0
+PASS | H7 | duplicate delivery of the same WhatsApp message is ignored | 
+PASS | L1 | anon lists avatar file names | 0
+PASS | L2 | service/maintenance context can deactivate a company | false
+PASS | M1 | room member overwrites translation of another user message | BLOCKED: permission denied for table room_messages
+PASS | M2 | duplicate plate in same company (spacing/case differs) | BLOCKED: duplicate key value violates unique constraint "vehicles_company_plate_uniq"
+PASS | M2 | duplicate outgoing invoice number in same company | BLOCKED: duplicate key value violates unique constraint "invoices_company_out_number_uniq"
+PASS | M2 | same incoming invoice number from two different suppliers is allowed | 2
+PASS | M4 | new company codes come from a CSPRNG (join >= 12, admin >= 16 chars) | SXLNK9RJLBV3 / F2NMTEJNLZW8NV2T
+PASS | M4 | company admin can rotate the join code but not see/rotate the admin code | 
+PASS | M4 | company admin cannot rotate the admin code | 
+PASS | M5 | MFA off: admin with password-only session keeps admin access | true
+PASS | M5 | company admin cannot switch the MFA requirement | false
+PASS | M5 | platform owner can require MFA | true
+PASS | M5 | MFA on: password-only (aal1) admin loses admin powers | false
+PASS | M5 | MFA on: aal1 admin cannot read other departments' invoices | 0
+PASS | M5 | MFA on: admin after TOTP (aal2) has admin powers | true
+PASS | M5 | my_account tells the UI to ask for the code | true/aal1
+PASS | M5 | employees are not affected by the admin MFA rule | true
+PASS | M6 | deleted record is hidden from the app | 0
+PASS | M6 | deleted record still exists in the database (recoverable) | 
+PASS | M6 | restore brings the record back | 
+PASS | M6 | hard DELETE through the API is refused for company admins | BLOCKED: permission denied for table documents
+PASS | M6 | employee cannot soft-delete | 
+PASS | M6 | soft-deleted company: its employees see nothing | 0
+PASS | M6 | soft-deleted company data still exists | 
+PASS | M6 | restored company works again | 1
+PASS | M6 | purge removes only records deleted > 30 days ago | 1
+PASS | M6 | purge cannot be called from the API | 
+PASS | M7 | no e-mail address hard-coded in sign-up trigger | 
+PASS | M7 | platform admin invite: only the owner can invite | 
+PASS | M7 | invited e-mail becomes an active platform admin, invite consumed | super_admin/active/0
+PASS | MCP-A | all 10 tool functions exist | 10
+PASS | MCP-A | every tool is SECURITY INVOKER (RLS applies) | 0
+PASS | MCP-A | every tool is read-only (STABLE) | 0
+PASS | MCP-A | no tool takes a company / user / role argument | 0
+PASS | MCP-A | anonymous caller cannot run a tool | BLOCKED: permission denied for function mcp_company_overview
+PASS | MCP-A | tool rejects a company_id argument (no such parameter) | 
+PASS | MCP-B | admin with live session can call | 
+PASS | MCP-B | no session_id in token -> refused | 
+PASS | MCP-B | unknown session id -> refused | 
+PASS | MCP-B | expired session (not_after past) -> refused | 
+PASS | MCP-B | session of ANOTHER user -> refused | 
+PASS | MCP-B | malformed session id -> refused, no crash detail | 
+PASS | MCP-B | pending (unapproved) account -> refused | 
+PASS | MCP-B | platform admin -> refused in v1 | 
+PASS | MCP-B | session revoked -> next call refused immediately | 
+PASS | MCP-B | disabled account -> refused | 
+PASS | MCP-B | hook missing -> every tool refuses (fail closed) | 
+PASS | MCP-C | B admin: invoices total = only B | 1
+PASS | MCP-C | B admin never sees A invoice numbers | 
+PASS | MCP-C | A admin never sees B secret invoice | 
+PASS | MCP-C | A fleet employee sees 0 invoices (department scope) | 0
+PASS | MCP-C | A finance employee sees finance invoices (8 incl. fixture) | 8
+PASS | MCP-C | search "ABC" from B returns only B vehicle | 00000000-0000-0000-0000-00000000c002
+PASS | MCP-C | B admin asks for A project by id -> not found | false
+PASS | MCP-C | B expiring list has no A items | 
+PASS | MCP-C | A expiring list has no B items | 
+PASS | MCP-C | A projects never include B project | 
+PASS | MCP-C | A fleet employee: people = own department only | 1
+PASS | MCP-C | people output has no phone or email | 
+PASS | MCP-C | A fleet employee report: zero revenue (finance invisible) | 0
+PASS | MCP-C | B usage rows invisible to A admin | 
+PASS | MCP-C | soft-deleted invoice never counted | 
+PASS | MCP-D | Nov revenue = 150000 (100000 + 50000) | 150000
+PASS | MCP-D | Nov supplier = 40000 | 40000
+PASS | MCP-D | Oct revenue = 120000, supplier = 30000 | 120000/30000
+PASS | MCP-D | revenue change = +30000 / +25.0% | 30000/25.0
+PASS | MCP-D | net invoiced change = +20000 / +22.2% | 20000/22.2
+PASS | MCP-D | collected vs outstanding Nov = 100000 / 50000 | 100000/50000
+PASS | MCP-D | invoices without due date are counted as excluded (= direct SQL) | 4
+PASS | MCP-D | net profit explicitly NOT available | false
+PASS | MCP-D | percent is null (not infinite) when base is zero | null
+PASS | MCP-D | top client in Nov: عميل س 100000 | عميل س 100000
+PASS | MCP-D | invalid period (from > to) rejected | 
+PASS | MCP-D | period longer than a year rejected | 
+PASS | MCP-D | unpaid total = direct SQL over A invoices | 202332
+PASS | MCP-D | overdue >= 30 days: only SEP-1 (7777) | SEP-1
+PASS | MCP-D | overview totals equal dashboard_stats | true
+PASS | MCP-D | late projects: only the overdue one, with days_late = 10 | 1/10
+PASS | MCP-D | missing contract value is reported, not guessed | 1
+PASS | MCP-D | fleet grouped by location (1 stopped at موقع أبقيق) | 1
+PASS | MCP-D | expiring: insurance in 5 days present | 1
+PASS | MCP-D | pagination: limit 1 returns 1 item, total = direct SQL count | 1/10
+PASS | MCP-D | pagination: huge limit clamped to 50 | 50
+PASS | MCP-D | pagination: offset beyond end -> empty list | 0
+PASS | MCP-D | pages are disjoint and complete (walk all offsets = total, no duplicates) | 10/10
+PASS | MCP-E | prompt-injection text returned only as data | 
+PASS | MCP-E | control characters stripped from text | 
+PASS | MCP-E | search wildcard injection neutralised ("%" alone) | 
+PASS | MCP-E | SQL-ish search input is just text | 
+PASS | MCP-E | invoices table still exists after that | 1
+PASS | MCP-E | invalid enum argument rejected | 
+PASS | MCP-E | OAuth token: UPDATE vehicle blocked (RLS restrictive) | 0
+PASS | MCP-E | OAuth token: INSERT invoice blocked | BLOCKED: new row violates row-level security policy "oauth_no_insert" for table "invoices"
+PASS | MCP-E | OAuth token: DELETE department blocked | 0
+PASS | MCP-E | OAuth token: storage upload blocked | BLOCKED: new row violates row-level security policy "oauth_no_insert" for table "objects"
+PASS | MCP-E | OAuth token: POST to API refused by pre-request hook | 
+PASS | MCP-E | OAuth token: write RPC (soft_delete) via POST refused by hook | 
+PASS | MCP-E | OAuth token: GET allowed by hook | 
+PASS | MCP-E | normal (non-OAuth) token: admin can still update (no regression) | 1
+PASS | MCP-E | normal token: POST allowed by hook | 
+PASS | MCP-E | OAuth session without client_id claim: UPDATE still blocked | 0
+PASS | MCP-E | OAuth session without client_id claim: POST refused by hook | 
+PASS | MCP-E | user cannot call mcp_begin | BLOCKED: permission denied for function mcp_begin
+PASS | MCP-E | user cannot write usage log | BLOCKED: permission denied for table mcp_usage
+PASS | MCP-E | user cannot call mcp_guard directly to probe others | BLOCKED: permission denied for function mcp_guard
+PASS | MCP-E | 31st call within a minute -> RATE_LIMITED_MINUTE | RATE_LIMITED_MINUTE
+PASS | MCP-E | rate limit is per user (other user unaffected) | true
+PASS | MCP-E | admin reads own company usage | true
+PASS | MCP-E | employee cannot read usage log | 0
+PASS | MCP-F | admin: select public.mcp_company_overview() | 54.8 ms
+PASS | MCP-F | admin: select public.mcp_invoices(p_min_days_overdue => 30) | 11.4 ms
+PASS | MCP-F | admin: select public.mcp_invoices(p_limit => 50, p_offset => 10000) | 49.7 ms
+PASS | MCP-F | admin: select public.mcp_fleet() | 3.8 ms
+PASS | MCP-F | admin: select public.mcp_expiring(30) | 15.7 ms
+PASS | MCP-F | admin: select public.mcp_people() | 3.2 ms
+PASS | MCP-F | admin: select public.mcp_search('INV-19') | 15.4 ms
+PASS | MCP-F | admin: select public.mcp_projects(p_late_only => true) | 1.5 ms
+PASS | MCP-F | admin: select public.mcp_profit_comparison(date_trunc('month', current_date): | 19.4 ms
+PASS | MCP-F | finance employee: select public.mcp_invoices(p_min_days_overdue => 30) | 10.5 ms
+PASS | MCP-F | finance employee: select public.mcp_profit_comparison(date_trunc('month', current_date): | 17.1 ms
+PASS | MON | client error is recorded with user and company | 1
+PASS | MON | client error logging is rate-limited (30/hour/user) | 30
+PASS | MON | only the platform owner can read system events | 0
+PASS | MON | health() answers anonymously | true
+PASS | MT | B employee reads company A vehicle | 0
+PASS | MT | B employee reads A invoices/profiles/rooms/messages | 0/0/0/0
+PASS | MT | B employee inserts vehicle into A | BLOCKED: new row violates row-level security policy for table "vehicles"
+PASS | MT | B employee updates A vehicle | 0
+PASS | MT | A driver moves own vehicle to company B | BLOCKED: new row violates row-level security policy for table "vehicles"
+PASS | MT | A admin deletes B user | BLOCKED: غير مصرح
+PASS | MT | A admin deletes company B | BLOCKED: غير مصرح
+PASS | MT | A admin renames company B | 0
+PASS | MT | B employee lists A room files | 0
+PASS | MT | B employee joins A room | BLOCKED: الموظف ليس من نفس الشركة
+PASS | MT | A admin adds B employee to A room | BLOCKED: الموظف ليس من نفس الشركة
+PASS | MT | anon reads any business table | 0
+PASS | MT | owner (super) sees both companies | 2
+PASS | PERF | finance employee sees exactly the 20,000 finance invoices | 20000
+PASS | PERF | fleet employee sees 0 invoices | 0
+PASS | PERF | big-company admin sees none of the other 49 companies invoices | 0
+PASS | PERM | A driver (fleet) reads finance invoice | 0
+PASS | PERM | A finance (assigned by admin) reads finance invoice | 1
+PASS | PERM | A driver promotes self to admin | employee
+PASS | PERM | A driver creates department | BLOCKED: new row violates row-level security policy for table "departments"
+PASS | PERM | A driver marks manager note done / edits manager text | مفتوحة|جدد التأمين
+PASS | PERM | A driver deletes admin message | 0
+---- 203 passed, 0 failed of 203

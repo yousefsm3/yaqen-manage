@@ -8,7 +8,7 @@ grant usage on sequence qa.results_n_seq to anon, authenticated;
 
 -- Run SQL as a given identity, the same way PostgREST does: SET ROLE + request.jwt.claims.
 -- who: a user uuid | 'anon' | 'service' (no JWT, table owner, like maintenance jobs)
-create function qa.run(who text, q text, ip text default '10.0.0.1', aal text default 'aal1') returns text language plpgsql as $f$
+create function qa.run(who text, q text, ip text default '10.0.0.1', aal text default 'aal1', extra jsonb default '{}') returns text language plpgsql as $f$
 declare r text;
 begin
   begin
@@ -20,7 +20,7 @@ begin
       perform set_config('request.jwt.claims', '{"role":"anon"}', true);
     else
       set local role authenticated;
-      perform set_config('request.jwt.claims', json_build_object('sub', who, 'role', 'authenticated', 'aal', aal)::text, true);
+      perform set_config('request.jwt.claims', (jsonb_build_object('sub', who, 'role', 'authenticated', 'aal', aal) || extra)::text, true);
     end if;
     execute q into r;
     reset role;
